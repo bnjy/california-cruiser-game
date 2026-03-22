@@ -1,5 +1,5 @@
 // ============================================================
-// California Cruiser — Milestone 1: Drive and Throw
+// California Cruiser — Milestone 2: Enemies and REP
 // ============================================================
 
 const NATIVE_W = 896;
@@ -7,19 +7,45 @@ const NATIVE_H = 240;
 const SCALE = 3;
 
 // Y positions (native coordinates) — bottom of sprite (origin 0.5, 1)
-// 3 lanes on the visible road/sidewalk surface of the 240px canvas:
-const SIDEWALK_Y = 195;     // sidewalk lane — just above the curb
-const ROAD_TOP_Y = 218;     // top road lane — between the white lines
-const ROAD_BOTTOM_Y = 238;  // bottom road lane — near canvas bottom
+const SIDEWALK_Y = 195;
+const ROAD_TOP_Y = 218;
+const ROAD_BOTTOM_Y = 238;
 
-// Player movement bounds (Y = bottom of car sprite since origin is 0.5, 1)
+// Player movement bounds
 const PLAYER_START_X = 160;
 const PLAYER_MIN_X = 60;
 const PLAYER_MAX_X = 400;
-const PLAYER_MIN_Y = SIDEWALK_Y;    // top bound: can't go above sidewalk
-const PLAYER_MAX_Y = ROAD_BOTTOM_Y; // bottom bound: bottom road lane
-const PLAYER_SPEED = 120; // pixels/sec in all directions
+const PLAYER_MIN_Y = SIDEWALK_Y;
+const PLAYER_MAX_Y = ROAD_BOTTOM_Y;
+const PLAYER_SPEED = 120;
 const BASE_SCROLL_SPEED = 80;
+
+// REP meter
+const REP_PER_SEGMENT = 20;
+const REP_SEGMENTS = 5;
+const REP_MAX = REP_PER_SEGMENT * REP_SEGMENTS;
+const REP_SEGMENT_BONUSES = [100, 200, 300, 500, 1000];
+const GOLD_RECORD_DURATION = 5000;
+
+// Bonus pickup definitions
+const BONUS_PICKUPS = [
+    { key: 'casette', cash: 10 },
+    { key: 'vhs', cash: 10 },
+    { key: 'phone', cash: 10 },
+    { key: 'rubik1', cash: 10 },
+    { key: 'dice1', cash: 5 },
+    { key: 'jojo', cash: 5 },
+    { key: 'crayon', cash: 5 },
+    { key: 'remote', cash: 5 },
+    { key: 'radio1', cash: 15 },
+    { key: 'film', cash: 15 },
+    { key: 'watch', cash: 15 },
+    { key: 'headphone', cash: 20 },
+    { key: 'casetteplayer', cash: 20 },
+    { key: 'camera', cash: 25 },
+    { key: 'lcdgame', cash: 30 },
+    { key: 'vcr', cash: 30 },
+];
 
 // ============================================================
 // Boot Scene — load all assets
@@ -35,11 +61,16 @@ class BootScene extends Phaser.Scene {
         this.load.image('bg-palms', 'assets/layers/palms.png');
         this.load.image('bg-highway', 'assets/layers/highway.png');
 
-        // Player car frames (individual images → animation)
+        // Player car frames
         for (let i = 1; i <= 5; i++) {
             this.load.image(`car-run-${i}`, `assets/cars/red/car-running${i}.png`);
         }
         this.load.image('car-static', 'assets/cars/red/car1.png');
+
+        // Black rival car frames
+        for (let i = 1; i <= 4; i++) {
+            this.load.image(`black-car-${i}`, `assets/cars/black/${i}Rpix128.png`);
+        }
 
         // Pedestrian sprite sheets (128x128 per frame)
         for (let h = 1; h <= 3; h++) {
@@ -50,10 +81,39 @@ class BootScene extends Phaser.Scene {
                 frameWidth: 128, frameHeight: 128
             });
         }
+        // Hater-only animations (homeless 1 & 3)
+        for (const h of [1, 3]) {
+            this.load.spritesheet(`homeless${h}-hurt`, `assets/characters/homeless${h}/Hurt.png`, {
+                frameWidth: 128, frameHeight: 128
+            });
+            this.load.spritesheet(`homeless${h}-special`, `assets/characters/homeless${h}/Special.png`, {
+                frameWidth: 128, frameHeight: 128
+            });
+        }
 
         // Items
         this.load.image('vinyl', 'assets/items/vinyl.png');
         this.load.image('dollar', 'assets/items/single_dollar.png');
+        this.load.image('battery', 'assets/items/battery1.png');
+        this.load.image('microphone', 'assets/items/microphone.png');
+
+        // Bonus retro items
+        this.load.image('casette', 'assets/items/casette.png');
+        this.load.image('vhs', 'assets/items/vhs.png');
+        this.load.image('camera', 'assets/items/camera.png');
+        this.load.image('headphone', 'assets/items/Headphone.png');
+        this.load.image('radio1', 'assets/items/radio1.png');
+        this.load.image('watch', 'assets/items/watch.png');
+        this.load.image('lcdgame', 'assets/items/LCDGame.png');
+        this.load.image('vcr', 'assets/items/vcr.png');
+        this.load.image('film', 'assets/items/film.png');
+        this.load.image('phone', 'assets/items/phone.png');
+        this.load.image('jojo', 'assets/items/jojo.png');
+        this.load.image('casetteplayer', 'assets/items/casetteplayer.png');
+        this.load.image('rubik1', 'assets/items/rubik1.png');
+        this.load.image('dice1', 'assets/items/dice1.png');
+        this.load.image('crayon', 'assets/items/crayon.png');
+        this.load.image('remote', 'assets/items/remote.png');
     }
 
     create() {
@@ -68,38 +128,25 @@ class TitleScene extends Phaser.Scene {
     constructor() { super('Title'); }
 
     create() {
-        // Parallax background for title
         this.bgBack = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-back').setOrigin(0, 0);
         this.bgSun = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-sun').setOrigin(0, 0);
         this.bgBuildings = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-buildings').setOrigin(0, 0);
         this.bgPalms = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-palms').setOrigin(0, 0);
         this.bgHighway = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-highway').setOrigin(0, 0);
 
-        // Static car on the road
         this.add.image(PLAYER_START_X, ROAD_BOTTOM_Y, 'car-static').setOrigin(0.5, 1);
 
-        // Title text
-        const titleStyle = {
-            fontSize: '32px',
-            fontFamily: 'monospace',
-            color: '#ff6ec7',
-            stroke: '#000',
-            strokeThickness: 4,
+        this.add.text(NATIVE_W / 2, 50, 'CALIFORNIA CRUISER', {
+            fontSize: '32px', fontFamily: 'monospace', color: '#ff6ec7',
+            stroke: '#000', strokeThickness: 4,
             shadow: { offsetX: 2, offsetY: 2, color: '#ff00ff', blur: 8, fill: true }
-        };
-        this.add.text(NATIVE_W / 2, 50, 'CALIFORNIA CRUISER', titleStyle).setOrigin(0.5);
+        }).setOrigin(0.5);
 
-        // Subtitle
-        const subStyle = {
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: '#00ffff',
-            stroke: '#000',
-            strokeThickness: 2
-        };
-        this.add.text(NATIVE_W / 2, 80, 'Throw vinyls. Build your rep. Own the boulevard.', subStyle).setOrigin(0.5);
+        this.add.text(NATIVE_W / 2, 80, 'Throw vinyls. Build your rep. Own the boulevard.', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#00ffff',
+            stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5);
 
-        // High score
         const highScore = localStorage.getItem('california-cruiser-highscore') || 0;
         if (highScore > 0) {
             this.add.text(NATIVE_W / 2, 100, `HIGH SCORE: $${highScore}`, {
@@ -108,28 +155,17 @@ class TitleScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
-        // Start prompt (blinking)
         const startText = this.add.text(NATIVE_W / 2, NATIVE_H - 40, 'PRESS SPACE TO START', {
             fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5);
 
-        this.tweens.add({
-            targets: startText,
-            alpha: 0.2,
-            duration: 600,
-            yoyo: true,
-            repeat: -1
-        });
+        this.tweens.add({ targets: startText, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
 
-        // Input
-        this.input.keyboard.once('keydown-SPACE', () => {
-            this.scene.start('Game');
-        });
+        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Game'));
     }
 
     update() {
-        // Slow parallax scroll on title
         this.bgBack.tilePositionX += 0.1;
         this.bgSun.tilePositionX += 0.15;
         this.bgBuildings.tilePositionX += 0.3;
@@ -139,21 +175,30 @@ class TitleScene extends Phaser.Scene {
 }
 
 // ============================================================
-// Game Scene — Milestone 1 gameplay
+// Game Scene — Full gameplay
 // ============================================================
 class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
 
     create() {
-        // State
+        // --- State ---
         this.cash = 0;
         this.rep = 0;
+        this.lastSegmentAwarded = 0;
+        this.hp = 3;
+        this.maxHp = 3;
         this.vinylAmmo = 15;
         this.vinylsThrown = 0;
         this.vinylsHit = 0;
         this.scrollSpeed = BASE_SCROLL_SPEED;
+        this.gameTime = 0;
+        this.isInvincible = false;
+        this.isGoldRecord = false;
+        this.micActive = false;
+        this.micTimer = null;
+        this.gameOver = false;
 
-        // --- Background layers (parallax) ---
+        // --- Background layers ---
         this.bgBack = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-back').setOrigin(0, 0);
         this.bgSun = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-sun').setOrigin(0, 0);
         this.bgBuildings = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-buildings').setOrigin(0, 0);
@@ -162,41 +207,24 @@ class GameScene extends Phaser.Scene {
 
         // --- Player car ---
         this.createPlayerCar();
+        this.createAnimations();
 
-        // --- Fan group ---
+        // --- Groups ---
         this.fans = this.add.group();
-        this.fanSpawnTimer = this.time.addEvent({
-            delay: 1800,
-            callback: this.spawnFan,
-            callbackScope: this,
-            loop: true
-        });
-        // Spawn first fan quickly
-        this.time.delayedCall(500, this.spawnFan, [], this);
-
-        // --- Vinyl road pickups ---
-        this.vinylPickups = this.physics.add.group();
-        this.pickupTimer = this.time.addEvent({
-            delay: 5000,
-            callback: this.spawnVinylPickup,
-            callbackScope: this,
-            loop: true
-        });
-
-        // --- Cash float texts ---
-        this.cashFloats = this.add.group();
-
-        // --- Pedestrians on road (jaywalkers) ---
+        this.haters = this.add.group();
         this.jaywalkers = this.add.group();
-        this.jaywalkerTimer = this.time.addEvent({
-            delay: 4000,
-            callback: this.spawnJaywalker,
-            callbackScope: this,
-            loop: true
-        });
-
-        // --- Vinyl projectile tracking (manual, no physics group) ---
         this.activeVinyls = [];
+        this.activeBottles = [];
+        this.roadPickups = this.add.group();
+        this.rivalCars = this.add.group();
+
+        // --- Spawn timers ---
+        this.fanTimer = this.time.addEvent({ delay: 1800, callback: this.spawnFan, callbackScope: this, loop: true });
+        this.time.delayedCall(500, this.spawnFan, [], this);
+        this.jaywalkerTimer = this.time.addEvent({ delay: 4000, callback: this.spawnJaywalker, callbackScope: this, loop: true });
+        this.haterTimer = this.time.addEvent({ delay: 6000, callback: this.spawnHater, callbackScope: this, loop: true });
+        this.pickupTimer = this.time.addEvent({ delay: 3500, callback: this.spawnRoadPickup, callbackScope: this, loop: true });
+        this.rivalCarTimer = this.time.addEvent({ delay: 20000, callback: this.spawnRivalCar, callbackScope: this, loop: true });
 
         // --- Input ---
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -211,389 +239,686 @@ class GameScene extends Phaser.Scene {
         this.createHUD();
     }
 
-    createPlayerCar() {
-        // Create animation from individual frames
-        const carFrames = [];
-        for (let i = 1; i <= 5; i++) {
-            this.textures.get(`car-run-${i}`);
-            carFrames.push({ key: `car-run-${i}` });
-        }
-
-        if (!this.anims.exists('car-driving')) {
-            this.anims.create({
-                key: 'car-driving',
-                frames: carFrames,
-                frameRate: 10,
-                repeat: -1
-            });
-        }
-
-        this.player = this.add.sprite(PLAYER_START_X, ROAD_BOTTOM_Y, 'car-run-1').setOrigin(0.5, 1);
-        this.player.setDepth(10); // Car renders above pedestrians
-        this.player.play('car-driving');
-    }
-
-    // Returns which lane the player is closest to (for collision checks)
-    getPlayerLane() {
-        const y = this.player.y;
-        const dBottom = Math.abs(y - ROAD_BOTTOM_Y);
-        const dTop = Math.abs(y - ROAD_TOP_Y);
-        const dSidewalk = Math.abs(y - SIDEWALK_Y);
-        if (dSidewalk <= dTop && dSidewalk <= dBottom) return 'sidewalk';
-        if (dTop <= dBottom) return 'road-top';
-        return 'road-bottom';
-    }
-
-    // --- Fan spawning ---
-    spawnFan() {
-        const variant = Phaser.Math.Between(1, 3);
-        const animKey = `homeless${variant}-walk`;
-        const catchAnimKey = `homeless${variant}-attack1`;
-
-        // Create walk animation if it doesn't exist
-        const walkKey = `fan-walk-${variant}`;
-        if (!this.anims.exists(walkKey)) {
-            this.anims.create({
-                key: walkKey,
-                frames: this.anims.generateFrameNumbers(`homeless${variant}-walk`, { start: 0, end: 7 }),
-                frameRate: 10,
-                repeat: -1
-            });
-        }
-
-        const catchKey = `fan-catch-${variant}`;
-        if (!this.anims.exists(catchKey)) {
-            const attackFrameCount = variant === 2 ? 10 : 5;
-            this.anims.create({
-                key: catchKey,
-                frames: this.anims.generateFrameNumbers(catchAnimKey, { start: 0, end: attackFrameCount - 1 }),
-                frameRate: 12,
-                repeat: 0
-            });
-        }
-
-        // On the sidewalk lane
-        const fanY = Phaser.Math.Between(SIDEWALK_Y - 5, SIDEWALK_Y + 5);
-        const fan = this.add.sprite(NATIVE_W + 60, fanY, `homeless${variant}-walk`).setOrigin(0.5, 1);
-        fan.setScale(0.7); // Scale down to fit the scene proportions
-        fan.play(walkKey);
-        fan.flipX = true; // Face left (walking direction)
-
-        // Store metadata
-        fan.setData('variant', variant);
-        fan.setData('speed', Phaser.Math.Between(30, 60));
-        fan.setData('caught', false);
-        fan.setData('catchKey', catchKey);
-
-        this.fans.add(fan);
-    }
-
-    // --- Jaywalker spawning (pedestrians on the road lanes) ---
-    spawnJaywalker() {
-        const variant = Phaser.Math.Between(1, 3);
-        const walkKey = `fan-walk-${variant}`;
-        // Ensure animation exists
-        if (!this.anims.exists(walkKey)) {
-            this.anims.create({
-                key: walkKey,
-                frames: this.anims.generateFrameNumbers(`homeless${variant}-walk`, { start: 0, end: 7 }),
-                frameRate: 10,
-                repeat: -1
-            });
-        }
-
-        // Only spawn on the 3 defined lanes
-        const lanes = [SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y];
-        const y = Phaser.Utils.Array.GetRandom(lanes);
-
-        const jaywalker = this.add.sprite(NATIVE_W + 60, y, `homeless${variant}-walk`).setOrigin(0.5, 1);
-        jaywalker.setScale(0.55);
-        jaywalker.play(walkKey);
-        jaywalker.flipX = true;
-        jaywalker.setData('speed', Phaser.Math.Between(20, 40));
-        jaywalker.setData('hit', false);
-        jaywalker.setData('laneY', y);
-
-        this.jaywalkers.add(jaywalker);
-    }
-
-    // --- Check car vs jaywalker collision (proximity-based) ---
-    checkJaywalkerCollisions() {
-        const jaywalkerChildren = this.jaywalkers.getChildren();
-        for (let i = jaywalkerChildren.length - 1; i >= 0; i--) {
-            const jw = jaywalkerChildren[i];
-            if (!jw.active || jw.getData('hit')) continue;
-
-            const dx = Math.abs(jw.x - this.player.x);
-            const dy = Math.abs(jw.y - this.player.y);
-
-            // Close enough horizontally and vertically
-            if (dx < 45 && dy < 20) {
-                // Car hit a jaywalker — REP penalty
-                jw.setData('hit', true);
-                this.rep = Math.max(0, this.rep - 15);
-                this.updateHUD();
-
-                // Show penalty text
-                this.showFloatText(jw.x, jw.y - 50, '-15 REP', '#ff4444');
-
-                // Jaywalker knocked away
-                this.tweens.add({
-                    targets: jw,
-                    y: jw.y - 30,
-                    x: jw.x - 40,
-                    alpha: 0,
-                    angle: -90,
-                    duration: 400,
-                    onComplete: () => jw.destroy()
+    createAnimations() {
+        // Fan walk/catch animations
+        for (let v = 1; v <= 3; v++) {
+            if (!this.anims.exists(`fan-walk-${v}`)) {
+                this.anims.create({
+                    key: `fan-walk-${v}`,
+                    frames: this.anims.generateFrameNumbers(`homeless${v}-walk`, { start: 0, end: 7 }),
+                    frameRate: 10, repeat: -1
+                });
+            }
+            if (!this.anims.exists(`fan-catch-${v}`)) {
+                const fc = v === 2 ? 10 : 5;
+                this.anims.create({
+                    key: `fan-catch-${v}`,
+                    frames: this.anims.generateFrameNumbers(`homeless${v}-attack1`, { start: 0, end: fc - 1 }),
+                    frameRate: 12, repeat: 0
                 });
             }
         }
+        // Hater special/hurt animations (variants 1 & 3)
+        for (const v of [1, 3]) {
+            if (!this.anims.exists(`hater-throw-${v}`)) {
+                this.anims.create({
+                    key: `hater-throw-${v}`,
+                    frames: this.anims.generateFrameNumbers(`homeless${v}-special`, { start: 0, end: 12 }),
+                    frameRate: 10, repeat: 0
+                });
+            }
+            if (!this.anims.exists(`hater-hurt-${v}`)) {
+                this.anims.create({
+                    key: `hater-hurt-${v}`,
+                    frames: this.anims.generateFrameNumbers(`homeless${v}-hurt`, { start: 0, end: 2 }),
+                    frameRate: 10, repeat: 0
+                });
+            }
+        }
+        // Car driving
+        if (!this.anims.exists('car-driving')) {
+            const carFrames = [];
+            for (let i = 1; i <= 5; i++) carFrames.push({ key: `car-run-${i}` });
+            this.anims.create({ key: 'car-driving', frames: carFrames, frameRate: 10, repeat: -1 });
+        }
+        // Rival car
+        if (!this.anims.exists('rival-driving')) {
+            const rivalFrames = [];
+            for (let i = 1; i <= 4; i++) rivalFrames.push({ key: `black-car-${i}` });
+            this.anims.create({ key: 'rival-driving', frames: rivalFrames, frameRate: 8, repeat: -1 });
+        }
     }
 
-    // --- Vinyl throwing ---
+    createPlayerCar() {
+        this.player = this.add.sprite(PLAYER_START_X, ROAD_BOTTOM_Y, 'car-run-1').setOrigin(0.5, 1);
+        this.player.setDepth(10);
+        this.player.play('car-driving');
+    }
+
+    // ========== SPAWNING ==========
+
+    spawnFan() {
+        if (this.gameOver) return;
+        const variant = Phaser.Math.Between(1, 3);
+        const fanY = Phaser.Math.Between(SIDEWALK_Y - 5, SIDEWALK_Y + 5);
+        const fan = this.add.sprite(NATIVE_W + 60, fanY, `homeless${variant}-walk`).setOrigin(0.5, 1);
+        fan.setScale(0.7);
+        fan.play(`fan-walk-${variant}`);
+        fan.flipX = true;
+        fan.setData('variant', variant);
+        fan.setData('speed', Phaser.Math.Between(30, 60));
+        fan.setData('caught', false);
+        this.fans.add(fan);
+    }
+
+    spawnHater() {
+        if (this.gameOver) return;
+        const variant = Phaser.Utils.Array.GetRandom([1, 3]);
+        const haterY = Phaser.Math.Between(SIDEWALK_Y - 5, SIDEWALK_Y + 5);
+        const hater = this.add.sprite(NATIVE_W + 60, haterY, `homeless${variant}-walk`).setOrigin(0.5, 1);
+        hater.setScale(0.7);
+        hater.play(`fan-walk-${variant}`);
+        hater.flipX = true;
+        hater.setData('variant', variant);
+        hater.setData('speed', Phaser.Math.Between(20, 40));
+        hater.setData('converted', false);
+        hater.setData('throwing', false);
+        hater.setData('throwCooldown', Phaser.Math.Between(2000, 4000));
+        hater.setData('lastThrow', 0);
+
+        // Red indicator circle above head
+        const indicator = this.add.circle(0, -85, 4, 0xff0000).setDepth(5);
+        hater.setData('indicator', indicator);
+
+        this.haters.add(hater);
+    }
+
+    spawnJaywalker() {
+        if (this.gameOver) return;
+        const variant = Phaser.Math.Between(1, 3);
+        const lanes = [SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y];
+        const y = Phaser.Utils.Array.GetRandom(lanes);
+        const jw = this.add.sprite(NATIVE_W + 60, y, `homeless${variant}-walk`).setOrigin(0.5, 1);
+        jw.setScale(0.55);
+        jw.play(`fan-walk-${variant}`);
+        jw.flipX = true;
+        jw.setData('speed', Phaser.Math.Between(20, 40));
+        jw.setData('hit', false);
+        this.jaywalkers.add(jw);
+    }
+
+    spawnRoadPickup() {
+        if (this.gameOver) return;
+        const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
+        const y = Phaser.Utils.Array.GetRandom(lanes) - 20;
+
+        // Decide what to spawn
+        const roll = Math.random();
+        let pickupKey, pickupType, pickupValue;
+
+        if (roll < 0.30) {
+            // Vinyl refill (30%)
+            pickupKey = 'vinyl';
+            pickupType = 'vinyl';
+            pickupValue = 3;
+        } else if (roll < 0.35) {
+            // Microphone power-up (5%)
+            pickupKey = 'microphone';
+            pickupType = 'microphone';
+            pickupValue = 0;
+        } else if (roll < 0.45) {
+            // Cash dollar (10%)
+            pickupKey = 'dollar';
+            pickupType = 'cash';
+            pickupValue = 50;
+        } else {
+            // Bonus retro item (55%)
+            const item = Phaser.Utils.Array.GetRandom(BONUS_PICKUPS);
+            pickupKey = item.key;
+            pickupType = 'cash';
+            pickupValue = item.cash;
+        }
+
+        const pickup = this.add.image(NATIVE_W + 20, y, pickupKey).setOrigin(0.5);
+        pickup.setScale(pickupKey === 'dollar' ? 0.15 : (pickupKey === 'microphone' ? 1.5 : 0.7));
+        pickup.setData('type', pickupType);
+        pickup.setData('value', pickupValue);
+        pickup.setData('key', pickupKey);
+        pickup.setDepth(5);
+
+        // Bob animation
+        this.tweens.add({
+            targets: pickup, y: y - 4, duration: 400,
+            yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
+
+        this.roadPickups.add(pickup);
+    }
+
+    spawnRivalCar() {
+        if (this.gameOver) return;
+        // Spawn in one of the two road lanes
+        const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
+        const y = Phaser.Utils.Array.GetRandom(lanes);
+
+        const rival = this.add.sprite(NATIVE_W + 150, y, 'black-car-1').setOrigin(0.5, 1);
+        rival.play('rival-driving');
+        rival.setDepth(9);
+        rival.setData('speed', this.scrollSpeed + 100);
+        rival.setData('hit', false);
+        rival.flipX = true; // Face left (coming toward player)
+
+        this.rivalCars.add(rival);
+    }
+
+    // ========== HATER BOTTLE THROWING ==========
+
+    haterThrowBottle(hater) {
+        if (hater.getData('converted') || !hater.active) return;
+
+        hater.setData('throwing', true);
+        const variant = hater.getData('variant');
+        hater.play(`hater-throw-${variant}`);
+        hater.setData('speed', 0); // Stop while throwing
+
+        // Spawn bottle mid-animation
+        this.time.delayedCall(600, () => {
+            if (!hater.active || hater.getData('converted')) return;
+
+            const bottle = this.add.image(hater.x, hater.y - 40, 'battery').setOrigin(0.5);
+            bottle.setScale(0.6);
+            bottle.setDepth(8);
+
+            this.activeBottles.push({
+                sprite: bottle,
+                vx: -80,
+                vy: 60,
+                gravity: 120,
+                active: true
+            });
+        });
+
+        // Resume walking after throw animation
+        this.time.delayedCall(1300, () => {
+            if (!hater.active || hater.getData('converted')) return;
+            hater.setData('throwing', false);
+            hater.setData('speed', Phaser.Math.Between(20, 40));
+            hater.play(`fan-walk-${variant}`);
+        });
+    }
+
+    // ========== VINYL THROWING ==========
+
     throwVinyl() {
-        if (this.vinylAmmo <= 0) return;
+        if (this.vinylAmmo <= 0 || this.gameOver) return;
 
         this.vinylAmmo--;
         this.vinylsThrown++;
         this.updateHUD();
 
-        // Launch from the car window area (top-center of car)
         const startX = this.player.x + 10;
         const startY = this.player.y - 50;
 
         const vinyl = this.add.image(startX, startY, 'vinyl').setOrigin(0.5);
         vinyl.setScale(0.7);
+        vinyl.setDepth(8);
 
-        // Manual velocity — fixed 45° arc upward-right
+        if (this.isGoldRecord) {
+            vinyl.setTint(0xffd700); // Gold tint
+        }
+
         const throwSpeed = 200;
-        const vinylData = {
-            sprite: vinyl,
-            vx: throwSpeed * 0.7,   // rightward
-            vy: -throwSpeed * 0.8,  // upward
-            gravity: 320,
+        let vx = throwSpeed * 0.7;
+        let vy = -throwSpeed * 0.8;
+
+        // GOLD RECORD auto-aim: find nearest fan/hater and aim toward them
+        if (this.isGoldRecord) {
+            const target = this.findNearestTarget();
+            if (target) {
+                const dx = target.x - startX;
+                const dy = (target.y - 40) - startY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const speed = 250;
+                vx = (dx / dist) * speed;
+                vy = (dy / dist) * speed * 0.6;
+            }
+        }
+
+        this.activeVinyls.push({
+            sprite: vinyl, vx, vy,
+            gravity: this.isGoldRecord ? 150 : 320,
             active: true
+        });
+    }
+
+    findNearestTarget() {
+        let nearest = null;
+        let nearestDist = Infinity;
+        const check = (group) => {
+            group.getChildren().forEach(t => {
+                if (!t.active) return;
+                if (t.getData('caught') || t.getData('converted')) return;
+                const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y);
+                if (d < nearestDist) { nearestDist = d; nearest = t; }
+            });
         };
-
-        this.activeVinyls.push(vinylData);
+        check(this.fans);
+        check(this.haters);
+        return nearest;
     }
 
-    // --- Vinyl pickup spawning ---
-    spawnVinylPickup() {
-        const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
-        const y = Phaser.Utils.Array.GetRandom(lanes) - 20;
+    // ========== DAMAGE & HP ==========
 
-        const pickup = this.physics.add.sprite(NATIVE_W + 20, y, 'vinyl').setOrigin(0.5);
-        pickup.setScale(0.7);
-        pickup.body.setAllowGravity(false);
-        pickup.setData('speed', this.scrollSpeed);
+    takeDamage(amount) {
+        if (this.isInvincible || this.gameOver) return;
 
-        // Gentle bob animation
+        this.hp = Math.max(0, this.hp - amount);
+        this.updateHUD();
+        this.isInvincible = true;
+
+        // Flash red
+        this.player.setTint(0xff0000);
         this.tweens.add({
-            targets: pickup,
-            y: y - 4,
-            duration: 400,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
+            targets: this.player, alpha: 0.3, duration: 100,
+            yoyo: true, repeat: 7,
+            onComplete: () => {
+                this.player.clearTint();
+                this.player.setAlpha(1);
+                this.isInvincible = false;
+            }
         });
 
-        this.vinylPickups.add(pickup);
+        if (this.hp <= 0) {
+            this.triggerGameOver();
+        }
     }
 
-    // --- Float text effect ---
-    showFloatText(x, y, message, color = '#00ff00') {
-        const text = this.add.text(x, y, message, {
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: color,
-            stroke: '#000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+    triggerGameOver() {
+        this.gameOver = true;
 
-        this.tweens.add({
-            targets: text,
-            y: y - 30,
-            alpha: 0,
-            duration: 1000,
-            ease: 'Power2',
-            onComplete: () => text.destroy()
-        });
-    }
+        // Save high score
+        const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
+        if (this.cash > prev) {
+            localStorage.setItem('california-cruiser-highscore', this.cash);
+        }
 
-    // --- Dollar float from fan ---
-    showDollarFloat(x, y) {
-        const dollar = this.add.image(x, y, 'dollar').setOrigin(0.5);
-        dollar.setScale(0.15);
+        // Stop all timers
+        this.fanTimer.remove();
+        this.haterTimer.remove();
+        this.jaywalkerTimer.remove();
+        this.pickupTimer.remove();
+        this.rivalCarTimer.remove();
 
-        this.tweens.add({
-            targets: dollar,
-            y: y - 40,
-            alpha: 0,
-            scaleX: 0.2,
-            scaleY: 0.2,
-            duration: 1200,
-            ease: 'Power2',
-            onComplete: () => dollar.destroy()
+        this.time.delayedCall(1000, () => {
+            this.scene.start('GameOver', {
+                cash: this.cash,
+                rep: this.rep,
+                accuracy: this.vinylsThrown > 0 ? Math.round((this.vinylsHit / this.vinylsThrown) * 100) : 0,
+                vinylsThrown: this.vinylsThrown,
+                vinylsHit: this.vinylsHit,
+                time: Math.floor(this.gameTime)
+            });
         });
     }
 
-    // --- HUD ---
+    // ========== REP METER ==========
+
+    addRep(amount) {
+        if (this.micActive) amount *= 2;
+        this.rep = Math.min(REP_MAX, this.rep + amount);
+
+        // Check segment bonuses
+        const currentSegment = Math.floor(this.rep / REP_PER_SEGMENT);
+        while (this.lastSegmentAwarded < currentSegment && this.lastSegmentAwarded < REP_SEGMENTS) {
+            const bonus = REP_SEGMENT_BONUSES[this.lastSegmentAwarded];
+            this.cash += bonus;
+            this.showFloatText(80, 30, `+$${bonus} REP BONUS!`, '#ffff00');
+            this.lastSegmentAwarded++;
+        }
+
+        // GOLD RECORD mode when full
+        if (this.rep >= REP_MAX && !this.isGoldRecord) {
+            this.activateGoldRecord();
+        }
+
+        this.updateHUD();
+    }
+
+    activateGoldRecord() {
+        this.isGoldRecord = true;
+        this.showFloatText(NATIVE_W / 2, 60, 'GOLD RECORD!', '#ffd700');
+
+        // Gold tint on car
+        this.player.setTint(0xffd700);
+
+        this.time.delayedCall(GOLD_RECORD_DURATION, () => {
+            this.isGoldRecord = false;
+            this.player.clearTint();
+            this.rep = 0;
+            this.lastSegmentAwarded = 0;
+            this.updateHUD();
+        });
+    }
+
+    activateMicrophone() {
+        this.micActive = true;
+        this.showFloatText(this.player.x, this.player.y - 70, '2x REP!', '#ff6ec7');
+        if (this.micTimer) this.micTimer.remove();
+        this.micTimer = this.time.delayedCall(8000, () => {
+            this.micActive = false;
+            this.micTimer = null;
+        });
+    }
+
+    // ========== COLLISION CHECKS ==========
+
+    checkVinylHits(dt) {
+        for (let i = this.activeVinyls.length - 1; i >= 0; i--) {
+            const v = this.activeVinyls[i];
+            if (!v.active) { this.activeVinyls.splice(i, 1); continue; }
+
+            v.vy += v.gravity * dt;
+            v.sprite.x += v.vx * dt;
+            v.sprite.y += v.vy * dt;
+            v.sprite.angle += 400 * dt;
+
+            let hit = false;
+
+            // Check fans
+            if (v.sprite.y >= SIDEWALK_Y - 60 && v.sprite.y <= SIDEWALK_Y + 30) {
+                for (const fan of this.fans.getChildren()) {
+                    if (!fan.active || fan.getData('caught')) continue;
+                    if (Math.abs(v.sprite.x - fan.x) < 40) {
+                        this.vinylHitFan(v, fan);
+                        hit = true; break;
+                    }
+                }
+                if (!hit) {
+                    for (const hater of this.haters.getChildren()) {
+                        if (!hater.active || hater.getData('converted')) continue;
+                        if (Math.abs(v.sprite.x - hater.x) < 40) {
+                            this.vinylHitHater(v, hater);
+                            hit = true; break;
+                        }
+                    }
+                }
+            }
+
+            if (hit) continue;
+            if (v.sprite.y > NATIVE_H + 30 || v.sprite.x > NATIVE_W + 60 || v.sprite.y < -30) {
+                v.sprite.destroy(); v.active = false;
+            }
+        }
+    }
+
+    vinylHitFan(vinylData, fan) {
+        vinylData.sprite.destroy();
+        vinylData.active = false;
+        fan.setData('caught', true);
+        this.vinylsHit++;
+
+        const cashGain = this.isGoldRecord ? 300 : 100;
+        const repGain = 10;
+        this.cash += cashGain;
+        this.addRep(repGain);
+        this.updateHUD();
+
+        const variant = fan.getData('variant');
+        fan.play(`fan-catch-${variant}`);
+        fan.setData('speed', 0);
+
+        this.showDollarFloat(fan.x, fan.y - 60);
+        this.showFloatText(fan.x, fan.y - 80, `+$${cashGain}`);
+
+        this.time.delayedCall(800, () => {
+            if (fan.active) {
+                this.tweens.add({ targets: fan, alpha: 0, duration: 300, onComplete: () => fan.destroy() });
+            }
+        });
+    }
+
+    vinylHitHater(vinylData, hater) {
+        vinylData.sprite.destroy();
+        vinylData.active = false;
+        hater.setData('converted', true);
+        this.vinylsHit++;
+
+        const cashGain = this.isGoldRecord ? 600 : 200;
+        const repGain = 25;
+        this.cash += cashGain;
+        this.addRep(repGain);
+        this.updateHUD();
+
+        const variant = hater.getData('variant');
+
+        // Remove red indicator
+        const indicator = hater.getData('indicator');
+        if (indicator) indicator.destroy();
+
+        // Play hurt then catch
+        hater.play(`hater-hurt-${variant}`);
+        hater.setData('speed', 0);
+
+        this.time.delayedCall(400, () => {
+            if (!hater.active) return;
+            hater.play(`fan-catch-${variant}`);
+            this.showDollarFloat(hater.x, hater.y - 60);
+            this.showFloatText(hater.x, hater.y - 80, `+$${cashGain}`, '#00ff00');
+            this.showFloatText(hater.x + 30, hater.y - 70, 'CONVERTED!', '#ff6ec7');
+        });
+
+        this.time.delayedCall(1200, () => {
+            if (hater.active) {
+                this.tweens.add({ targets: hater, alpha: 0, duration: 300, onComplete: () => hater.destroy() });
+            }
+        });
+    }
+
+    checkBottleHits(dt) {
+        for (let i = this.activeBottles.length - 1; i >= 0; i--) {
+            const b = this.activeBottles[i];
+            if (!b.active) { this.activeBottles.splice(i, 1); continue; }
+
+            b.vy += b.gravity * dt;
+            b.sprite.x += b.vx * dt;
+            b.sprite.y += b.vy * dt;
+            b.sprite.angle += 300 * dt;
+
+            // Check if bottle hit player
+            const dx = Math.abs(b.sprite.x - this.player.x);
+            const dy = Math.abs(b.sprite.y - (this.player.y - 25));
+            if (dx < 50 && dy < 25) {
+                b.sprite.destroy(); b.active = false;
+                this.takeDamage(1);
+                this.showFloatText(this.player.x, this.player.y - 70, '-1 HP', '#ff4444');
+                continue;
+            }
+
+            // Off screen
+            if (b.sprite.y > NATIVE_H + 20 || b.sprite.x < -30) {
+                b.sprite.destroy(); b.active = false;
+            }
+        }
+    }
+
+    checkJaywalkerCollisions() {
+        for (const jw of [...this.jaywalkers.getChildren()]) {
+            if (!jw.active || jw.getData('hit')) continue;
+            const dx = Math.abs(jw.x - this.player.x);
+            const dy = Math.abs(jw.y - this.player.y);
+            if (dx < 45 && dy < 20) {
+                jw.setData('hit', true);
+                this.rep = Math.max(0, this.rep - 15);
+                this.updateHUD();
+                this.showFloatText(jw.x, jw.y - 50, '-15 REP', '#ff4444');
+                this.tweens.add({
+                    targets: jw, y: jw.y - 30, x: jw.x - 40, alpha: 0, angle: -90,
+                    duration: 400, onComplete: () => jw.destroy()
+                });
+            }
+        }
+    }
+
+    checkPickupCollisions() {
+        for (const pickup of [...this.roadPickups.getChildren()]) {
+            if (!pickup.active) continue;
+            if (Math.abs(pickup.x - this.player.x) < 50 &&
+                Math.abs(pickup.y - (this.player.y - 20)) < 25) {
+                const type = pickup.getData('type');
+                const value = pickup.getData('value');
+                const key = pickup.getData('key');
+
+                if (type === 'vinyl') {
+                    this.vinylAmmo += value;
+                    this.showFloatText(pickup.x, pickup.y - 10, `+${value} VINYL`, '#ff6ec7');
+                } else if (type === 'microphone') {
+                    this.activateMicrophone();
+                } else if (type === 'cash') {
+                    this.cash += value;
+                    this.showFloatText(pickup.x, pickup.y - 10, `+$${value}`, '#00ff00');
+                }
+
+                this.updateHUD();
+                this.tweens.add({
+                    targets: pickup, scaleX: pickup.scaleX * 1.5, scaleY: pickup.scaleY * 1.5,
+                    alpha: 0, duration: 200, onComplete: () => pickup.destroy()
+                });
+            }
+        }
+    }
+
+    checkRivalCarCollisions() {
+        for (const rival of [...this.rivalCars.getChildren()]) {
+            if (!rival.active || rival.getData('hit')) continue;
+            const dx = Math.abs(rival.x - this.player.x);
+            const dy = Math.abs(rival.y - this.player.y);
+            if (dx < 70 && dy < 20) {
+                rival.setData('hit', true);
+                this.takeDamage(2);
+                this.showFloatText(this.player.x, this.player.y - 70, '-2 HP!', '#ff0000');
+
+                // Knockback — push player to other road lane
+                const knockY = this.player.y < (ROAD_TOP_Y + ROAD_BOTTOM_Y) / 2 ? ROAD_BOTTOM_Y : ROAD_TOP_Y;
+                this.tweens.add({
+                    targets: this.player, y: knockY, duration: 200, ease: 'Power2'
+                });
+            }
+        }
+    }
+
+    // ========== HUD ==========
+
     createHUD() {
-        const hudStyle = {
-            fontSize: '10px',
-            fontFamily: 'monospace',
-            color: '#ffffff',
-            stroke: '#000',
-            strokeThickness: 3
-        };
+        const s = { fontSize: '10px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 3 };
 
-        this.cashText = this.add.text(NATIVE_W - 10, 10, '$0', {
-            ...hudStyle, fontSize: '14px', color: '#00ff00'
-        }).setOrigin(1, 0).setScrollFactor(0);
+        this.cashText = this.add.text(NATIVE_W - 10, 8, '$0', { ...s, fontSize: '14px', color: '#00ff00' }).setOrigin(1, 0).setDepth(20);
+        this.ammoText = this.add.text(NATIVE_W - 10, 26, 'VINYL: 15', { ...s, color: '#ff6ec7' }).setOrigin(1, 0).setDepth(20);
+        this.accuracyText = this.add.text(NATIVE_W - 10, 40, 'ACC: ---', { ...s, color: '#00ffff' }).setOrigin(1, 0).setDepth(20);
 
-        this.ammoText = this.add.text(NATIVE_W - 10, 28, 'VINYL: 15', {
-            ...hudStyle, color: '#ff6ec7'
-        }).setOrigin(1, 0).setScrollFactor(0);
+        // HP icons
+        this.hpIcons = [];
+        for (let i = 0; i < this.maxHp; i++) {
+            const icon = this.add.text(10 + i * 14, NATIVE_H - 16, '♥', {
+                fontSize: '12px', fontFamily: 'monospace', color: '#ff0044', stroke: '#000', strokeThickness: 2
+            }).setDepth(20);
+            this.hpIcons.push(icon);
+        }
 
-        this.accuracyText = this.add.text(NATIVE_W - 10, 42, 'ACC: ---', {
-            ...hudStyle, color: '#00ffff'
-        }).setOrigin(1, 0).setScrollFactor(0);
+        // REP meter — 5-segment vertical bar on left
+        this.repSegments = [];
+        const colors = [0x44ff44, 0x88ff44, 0xffff00, 0xff8800, 0xff0044];
+        for (let i = 0; i < REP_SEGMENTS; i++) {
+            const y = 70 - i * 12;
+            const bg = this.add.rectangle(14, y, 20, 10, 0x333333).setOrigin(0.5).setDepth(20);
+            const fill = this.add.rectangle(14, y, 20, 10, colors[i]).setOrigin(0.5).setDepth(20);
+            fill.setScale(1, 0); // Start empty
+            this.repSegments.push({ bg, fill, color: colors[i] });
+        }
+        this.repLabel = this.add.text(14, 78, 'REP', {
+            fontSize: '7px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5).setDepth(20);
 
-        this.repText = this.add.text(10, 10, 'REP: 0', {
-            ...hudStyle, fontSize: '12px', color: '#ffff00'
-        }).setOrigin(0, 0).setScrollFactor(0);
+        // Mic active indicator
+        this.micText = this.add.text(NATIVE_W / 2, 8, '2x REP!', {
+            fontSize: '12px', fontFamily: 'monospace', color: '#ff6ec7', stroke: '#000', strokeThickness: 3
+        }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
+
+        // Gold record text
+        this.goldText = this.add.text(NATIVE_W / 2, 22, 'GOLD RECORD!', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#ffd700', stroke: '#000', strokeThickness: 3
+        }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
     }
 
     updateHUD() {
         this.cashText.setText(`$${this.cash}`);
         this.ammoText.setText(`VINYL: ${this.vinylAmmo}`);
-        const acc = this.vinylsThrown > 0
-            ? Math.round((this.vinylsHit / this.vinylsThrown) * 100)
-            : 0;
+        const acc = this.vinylsThrown > 0 ? Math.round((this.vinylsHit / this.vinylsThrown) * 100) : 0;
         this.accuracyText.setText(`ACC: ${this.vinylsThrown > 0 ? acc + '%' : '---'}`);
-        this.repText.setText(`REP: ${this.rep}`);
-    }
 
-    // --- Update vinyl positions (manual physics) ---
-    updateVinyls(dt) {
-        for (let i = this.activeVinyls.length - 1; i >= 0; i--) {
-            const v = this.activeVinyls[i];
-            if (!v.active) {
-                this.activeVinyls.splice(i, 1);
-                continue;
-            }
-
-            // Apply gravity
-            v.vy += v.gravity * dt;
-            v.sprite.x += v.vx * dt;
-            v.sprite.y += v.vy * dt;
-
-            // Spin
-            v.sprite.angle += 400 * dt;
-
-            // Check if vinyl is near any fan — hit detection
-            if (v.sprite.y >= SIDEWALK_Y - 50 && v.sprite.y <= SIDEWALK_Y + 25) {
-                const fans = this.fans.getChildren();
-                let hit = false;
-                for (let j = 0; j < fans.length; j++) {
-                    const fan = fans[j];
-                    if (!fan.active || fan.getData('caught')) continue;
-
-                    const dist = Math.abs(v.sprite.x - fan.x);
-                    if (dist < 40) {
-                        this.vinylHit(v, fan);
-                        hit = true;
-                        break;
-                    }
-                }
-                if (hit) continue;
-            }
-
-            // Vinyl went off screen or past sidewalk — remove
-            if (v.sprite.y > NATIVE_H + 30 || v.sprite.x > NATIVE_W + 60 || v.sprite.y < -30) {
-                v.sprite.destroy();
-                v.active = false;
-            }
+        // HP
+        for (let i = 0; i < this.maxHp; i++) {
+            this.hpIcons[i].setAlpha(i < this.hp ? 1 : 0.2);
         }
+
+        // REP meter segments
+        const repPerSeg = REP_PER_SEGMENT;
+        for (let i = 0; i < REP_SEGMENTS; i++) {
+            const segStart = i * repPerSeg;
+            const segProgress = Math.max(0, Math.min(1, (this.rep - segStart) / repPerSeg));
+            this.repSegments[i].fill.setScale(1, segProgress);
+        }
+
+        // Mic active
+        this.micText.setAlpha(this.micActive ? 1 : 0);
+        this.goldText.setAlpha(this.isGoldRecord ? 1 : 0);
     }
 
-    vinylHit(vinylData, fan) {
-        // Destroy vinyl
-        vinylData.sprite.destroy();
-        vinylData.active = false;
-        fan.setData('caught', true);
+    // ========== EFFECTS ==========
 
-        this.vinylsHit++;
-        const cashGain = 100;
-        const repGain = 10;
-        this.cash += cashGain;
-        this.rep += repGain;
-        this.updateHUD();
-
-        // Fan catches — play catch animation
-        const catchKey = fan.getData('catchKey');
-        fan.play(catchKey);
-        fan.setData('speed', 0); // Stop moving
-
-        // Dollar float up
-        this.showDollarFloat(fan.x, fan.y - 60);
-        this.showFloatText(fan.x, fan.y - 80, `+$${cashGain}`);
-        this.showFloatText(fan.x + 30, fan.y - 70, `+${repGain} REP`, '#ffff00');
-
-        // Remove fan after catch animation
-        this.time.delayedCall(800, () => {
-            if (fan.active) {
-                this.tweens.add({
-                    targets: fan,
-                    alpha: 0,
-                    duration: 300,
-                    onComplete: () => fan.destroy()
-                });
-            }
+    showFloatText(x, y, message, color = '#00ff00') {
+        const text = this.add.text(x, y, message, {
+            fontSize: '10px', fontFamily: 'monospace', color, stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5).setDepth(25);
+        this.tweens.add({
+            targets: text, y: y - 30, alpha: 0, duration: 1000,
+            ease: 'Power2', onComplete: () => text.destroy()
         });
     }
 
-    // --- Pickup collection ---
-    checkPickupCollisions() {
-        const pickups = this.vinylPickups.getChildren();
-        const playerBounds = {
-            x: this.player.x - 50,
-            y: this.player.y - 40,
-            w: 100,
-            h: 40
-        };
-
-        for (let i = pickups.length - 1; i >= 0; i--) {
-            const pickup = pickups[i];
-            if (!pickup.active) continue;
-
-            if (Math.abs(pickup.x - this.player.x) < 50 &&
-                Math.abs(pickup.y - (this.player.y - 20)) < 25) {
-                // Collected!
-                this.vinylAmmo += 3;
-                this.updateHUD();
-                this.showFloatText(pickup.x, pickup.y - 10, '+3 VINYL', '#ff6ec7');
-
-                // Brief flash
-                this.tweens.add({
-                    targets: pickup,
-                    scaleX: 1.5,
-                    scaleY: 1.5,
-                    alpha: 0,
-                    duration: 200,
-                    onComplete: () => pickup.destroy()
-                });
-            }
-        }
+    showDollarFloat(x, y) {
+        const dollar = this.add.image(x, y, 'dollar').setOrigin(0.5).setScale(0.15).setDepth(25);
+        this.tweens.add({
+            targets: dollar, y: y - 40, alpha: 0, scaleX: 0.2, scaleY: 0.2,
+            duration: 1200, ease: 'Power2', onComplete: () => dollar.destroy()
+        });
     }
 
-    // --- Main update loop ---
-    update(time, delta) {
-        const dt = delta / 1000;
+    // ========== DIFFICULTY RAMP ==========
 
-        // Parallax scrolling
+    updateDifficulty() {
+        // Gradual speed increase
+        this.scrollSpeed = BASE_SCROLL_SPEED + (this.gameTime * 1.5);
+
+        // Spawn rate adjustments (decrease delays = more spawns)
+        const fanDelay = Math.max(800, 1800 - this.gameTime * 10);
+        const haterDelay = Math.max(2500, 6000 - this.gameTime * 20);
+        const jayDelay = Math.max(2000, 4000 - this.gameTime * 10);
+        const rivalDelay = Math.max(8000, 20000 - this.gameTime * 80);
+
+        this.fanTimer.delay = fanDelay;
+        this.haterTimer.delay = haterDelay;
+        this.jaywalkerTimer.delay = jayDelay;
+        this.rivalCarTimer.delay = rivalDelay;
+    }
+
+    // ========== MAIN UPDATE ==========
+
+    update(time, delta) {
+        if (this.gameOver) return;
+        const dt = delta / 1000;
+        this.gameTime += dt;
+
+        // Parallax
         const speed = this.scrollSpeed * dt;
         this.bgBack.tilePositionX += speed * 0.1;
         this.bgSun.tilePositionX += speed * 0.15;
@@ -601,60 +926,138 @@ class GameScene extends Phaser.Scene {
         this.bgPalms.tilePositionX += speed * 0.5;
         this.bgHighway.tilePositionX += speed * 1.0;
 
-        // Free 4-directional movement (continuous while held)
-        if (this.cursors.up.isDown || this.keyW.isDown) {
+        // Player movement
+        if (this.cursors.up.isDown || this.keyW.isDown)
             this.player.y = Math.max(PLAYER_MIN_Y, this.player.y - PLAYER_SPEED * dt);
-        }
-        if (this.cursors.down.isDown || this.keyS.isDown) {
+        if (this.cursors.down.isDown || this.keyS.isDown)
             this.player.y = Math.min(PLAYER_MAX_Y, this.player.y + PLAYER_SPEED * dt);
-        }
-        if (this.cursors.left.isDown || this.keyA.isDown) {
+        if (this.cursors.left.isDown || this.keyA.isDown)
             this.player.x = Math.max(PLAYER_MIN_X, this.player.x - PLAYER_SPEED * dt);
-        }
-        if (this.cursors.right.isDown || this.keyD.isDown) {
+        if (this.cursors.right.isDown || this.keyD.isDown)
             this.player.x = Math.min(PLAYER_MAX_X, this.player.x + PLAYER_SPEED * dt);
-        }
 
-        // Move fans left (sidewalk)
-        const fanChildren = this.fans.getChildren();
-        for (let i = fanChildren.length - 1; i >= 0; i--) {
-            const fan = fanChildren[i];
+        // Move fans
+        for (const fan of [...this.fans.getChildren()]) {
             if (!fan.active) continue;
-            const fanSpeed = fan.getData('speed') || 40;
-            fan.x -= (fanSpeed + this.scrollSpeed * 0.3) * dt;
+            fan.x -= (fan.getData('speed') + this.scrollSpeed * 0.3) * dt;
             if (fan.x < -80) fan.destroy();
         }
 
-        // Move jaywalkers left (road)
-        const jwChildren = this.jaywalkers.getChildren();
-        for (let i = jwChildren.length - 1; i >= 0; i--) {
-            const jw = jwChildren[i];
+        // Move haters + bottle throwing logic
+        for (const hater of [...this.haters.getChildren()]) {
+            if (!hater.active) continue;
+            const spd = hater.getData('speed') || 0;
+            hater.x -= (spd + this.scrollSpeed * 0.3) * dt;
+
+            // Update indicator position
+            const ind = hater.getData('indicator');
+            if (ind && ind.active) { ind.x = hater.x; ind.y = hater.y - 85; }
+
+            // Throw bottle periodically
+            if (!hater.getData('converted') && !hater.getData('throwing') && hater.x < NATIVE_W - 50) {
+                const lastThrow = hater.getData('lastThrow') || 0;
+                const cooldown = hater.getData('throwCooldown') || 3000;
+                if (time - lastThrow > cooldown) {
+                    hater.setData('lastThrow', time);
+                    this.haterThrowBottle(hater);
+                }
+            }
+
+            if (hater.x < -80) {
+                if (ind) ind.destroy();
+                hater.destroy();
+            }
+        }
+
+        // Move jaywalkers
+        for (const jw of [...this.jaywalkers.getChildren()]) {
             if (!jw.active) continue;
-            const jwSpeed = jw.getData('speed') || 30;
-            jw.x -= (jwSpeed + this.scrollSpeed * 0.5) * dt;
+            jw.x -= (jw.getData('speed') + this.scrollSpeed * 0.5) * dt;
             if (jw.x < -80) jw.destroy();
         }
 
-        // Move vinyl pickups left
-        const pickupChildren = this.vinylPickups.getChildren();
-        for (let i = pickupChildren.length - 1; i >= 0; i--) {
-            const pickup = pickupChildren[i];
+        // Move road pickups
+        for (const pickup of [...this.roadPickups.getChildren()]) {
             if (!pickup.active) continue;
             pickup.x -= this.scrollSpeed * dt;
             if (pickup.x < -30) pickup.destroy();
         }
 
-        // Update vinyl projectiles (manual physics)
-        this.updateVinyls(dt);
+        // Move rival cars
+        for (const rival of [...this.rivalCars.getChildren()]) {
+            if (!rival.active) continue;
+            rival.x -= rival.getData('speed') * dt;
+            if (rival.x < -200) rival.destroy();
+        }
 
-        // Check collisions
+        // Update projectiles
+        this.checkVinylHits(dt);
+        this.checkBottleHits(dt);
+
+        // Collision checks
         this.checkJaywalkerCollisions();
         this.checkPickupCollisions();
+        this.checkRivalCarCollisions();
+
+        // Difficulty ramp
+        this.updateDifficulty();
+
+        // REP drain if accuracy < 30%
+        if (this.vinylsThrown > 5) {
+            const acc = this.vinylsHit / this.vinylsThrown;
+            if (acc < 0.3) {
+                this.rep = Math.max(0, this.rep - 2 * dt);
+                this.updateHUD();
+            }
+        }
     }
 }
 
 // ============================================================
-// Phaser Game Config
+// Game Over Scene
+// ============================================================
+class GameOverScene extends Phaser.Scene {
+    constructor() { super('GameOver'); }
+
+    create(data) {
+        this.cameras.main.setBackgroundColor('#1a0a2e');
+
+        this.add.text(NATIVE_W / 2, 30, 'WRECKED', {
+            fontSize: '36px', fontFamily: 'monospace', color: '#ff0044',
+            stroke: '#000', strokeThickness: 5,
+            shadow: { offsetX: 2, offsetY: 2, color: '#ff0000', blur: 10, fill: true }
+        }).setOrigin(0.5);
+
+        const stats = [
+            `CASH: $${data.cash}`,
+            `ACCURACY: ${data.accuracy}%  (${data.vinylsHit}/${data.vinylsThrown})`,
+            `REP: ${data.rep}`,
+            `TIME: ${data.time}s`,
+        ];
+
+        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
+        const isNew = data.cash >= highScore && data.cash > 0;
+        if (isNew) stats.push('', 'NEW HIGH SCORE!');
+        stats.push('', `HIGH SCORE: $${highScore}`);
+
+        this.add.text(NATIVE_W / 2, 90, stats.join('\n'), {
+            fontSize: '10px', fontFamily: 'monospace', color: '#ffffff',
+            stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
+        }).setOrigin(0.5, 0);
+
+        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 30, 'PRESS SPACE TO RETRY', {
+            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
+            stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5);
+
+        this.tweens.add({ targets: retry, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
+
+        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Title'));
+    }
+}
+
+// ============================================================
+// Phaser Config
 // ============================================================
 const config = {
     type: Phaser.AUTO,
@@ -668,12 +1071,9 @@ const config = {
     },
     physics: {
         default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
+        arcade: { gravity: { y: 0 }, debug: false }
     },
-    scene: [BootScene, TitleScene, GameScene]
+    scene: [BootScene, TitleScene, GameScene, GameOverScene]
 };
 
 const game = new Phaser.Game(config);
