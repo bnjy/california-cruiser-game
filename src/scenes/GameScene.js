@@ -1,183 +1,13 @@
-// ============================================================
-// California Cruiser — Milestone 2: Enemies and REP
-// ============================================================
+import {
+    NATIVE_W, NATIVE_H,
+    SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y,
+    PLAYER_START_X, PLAYER_MIN_X, PLAYER_MAX_X, PLAYER_MIN_Y, PLAYER_MAX_Y, PLAYER_SPEED,
+    BASE_SCROLL_SPEED,
+    REP_PER_SEGMENT, REP_SEGMENTS, REP_MAX, REP_SEGMENT_BONUSES, GOLD_RECORD_DURATION,
+    BONUS_PICKUPS,
+} from '../config.js';
 
-const NATIVE_W = 896;
-const NATIVE_H = 240;
-const SCALE = 3;
-
-// Y positions (native coordinates) — bottom of sprite (origin 0.5, 1)
-const SIDEWALK_Y = 195;
-const ROAD_TOP_Y = 218;
-const ROAD_BOTTOM_Y = 238;
-
-// Player movement bounds
-const PLAYER_START_X = 160;
-const PLAYER_MIN_X = 60;
-const PLAYER_MAX_X = 400;
-const PLAYER_MIN_Y = SIDEWALK_Y;
-const PLAYER_MAX_Y = ROAD_BOTTOM_Y;
-const PLAYER_SPEED = 120;
-const BASE_SCROLL_SPEED = 80;
-
-// REP meter
-const REP_PER_SEGMENT = 20;
-const REP_SEGMENTS = 5;
-const REP_MAX = REP_PER_SEGMENT * REP_SEGMENTS;
-const REP_SEGMENT_BONUSES = [100, 200, 300, 500, 1000];
-const GOLD_RECORD_DURATION = 5000;
-
-// Bonus pickup definitions
-const BONUS_PICKUPS = [
-    { key: 'casette', cash: 10 },
-    { key: 'vhs', cash: 10 },
-    { key: 'phone', cash: 10 },
-    { key: 'rubik1', cash: 10 },
-    { key: 'dice1', cash: 5 },
-    { key: 'jojo', cash: 5 },
-    { key: 'crayon', cash: 5 },
-    { key: 'remote', cash: 5 },
-    { key: 'radio1', cash: 15 },
-    { key: 'film', cash: 15 },
-    { key: 'watch', cash: 15 },
-    { key: 'headphone', cash: 20 },
-    { key: 'casetteplayer', cash: 20 },
-    { key: 'camera', cash: 25 },
-    { key: 'lcdgame', cash: 30 },
-    { key: 'vcr', cash: 30 },
-];
-
-// ============================================================
-// Boot Scene — load all assets
-// ============================================================
-class BootScene extends Phaser.Scene {
-    constructor() { super('Boot'); }
-
-    preload() {
-        // Background layers
-        this.load.image('bg-back', 'assets/layers/back.png');
-        this.load.image('bg-sun', 'assets/layers/sun.png');
-        this.load.image('bg-buildings', 'assets/layers/buildings.png');
-        this.load.image('bg-palms', 'assets/layers/palms.png');
-        this.load.image('bg-highway', 'assets/layers/highway.png');
-
-        // Player car frames
-        for (let i = 1; i <= 5; i++) {
-            this.load.image(`car-run-${i}`, `assets/cars/red/car-running${i}.png`);
-        }
-        this.load.image('car-static', 'assets/cars/red/car1.png');
-
-        // Black rival car frames
-        for (let i = 1; i <= 4; i++) {
-            this.load.image(`black-car-${i}`, `assets/cars/black/${i}Rpix128.png`);
-        }
-
-        // Pedestrian sprite sheets (128x128 per frame)
-        for (let h = 1; h <= 3; h++) {
-            this.load.spritesheet(`homeless${h}-walk`, `assets/characters/homeless${h}/Walk.png`, {
-                frameWidth: 128, frameHeight: 128
-            });
-            this.load.spritesheet(`homeless${h}-attack1`, `assets/characters/homeless${h}/Attack_1.png`, {
-                frameWidth: 128, frameHeight: 128
-            });
-        }
-        // Hater-only animations (homeless 1 & 3)
-        for (const h of [1, 3]) {
-            this.load.spritesheet(`homeless${h}-hurt`, `assets/characters/homeless${h}/Hurt.png`, {
-                frameWidth: 128, frameHeight: 128
-            });
-            this.load.spritesheet(`homeless${h}-special`, `assets/characters/homeless${h}/Special.png`, {
-                frameWidth: 128, frameHeight: 128
-            });
-        }
-
-        // Items
-        this.load.image('vinyl', 'assets/items/vinyl.png');
-        this.load.image('dollar', 'assets/items/single_dollar.png');
-        this.load.image('battery', 'assets/items/battery1.png');
-        this.load.image('microphone', 'assets/items/microphone.png');
-
-        // Bonus retro items
-        this.load.image('casette', 'assets/items/casette.png');
-        this.load.image('vhs', 'assets/items/vhs.png');
-        this.load.image('camera', 'assets/items/camera.png');
-        this.load.image('headphone', 'assets/items/Headphone.png');
-        this.load.image('radio1', 'assets/items/radio1.png');
-        this.load.image('watch', 'assets/items/watch.png');
-        this.load.image('lcdgame', 'assets/items/LCDGame.png');
-        this.load.image('vcr', 'assets/items/vcr.png');
-        this.load.image('film', 'assets/items/film.png');
-        this.load.image('phone', 'assets/items/phone.png');
-        this.load.image('jojo', 'assets/items/jojo.png');
-        this.load.image('casetteplayer', 'assets/items/casetteplayer.png');
-        this.load.image('rubik1', 'assets/items/rubik1.png');
-        this.load.image('dice1', 'assets/items/dice1.png');
-        this.load.image('crayon', 'assets/items/crayon.png');
-        this.load.image('remote', 'assets/items/remote.png');
-    }
-
-    create() {
-        this.scene.start('Title');
-    }
-}
-
-// ============================================================
-// Title Scene
-// ============================================================
-class TitleScene extends Phaser.Scene {
-    constructor() { super('Title'); }
-
-    create() {
-        this.bgBack = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-back').setOrigin(0, 0);
-        this.bgSun = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-sun').setOrigin(0, 0);
-        this.bgBuildings = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-buildings').setOrigin(0, 0);
-        this.bgPalms = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-palms').setOrigin(0, 0);
-        this.bgHighway = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-highway').setOrigin(0, 0);
-
-        this.add.image(PLAYER_START_X, ROAD_BOTTOM_Y, 'car-static').setOrigin(0.5, 1);
-
-        this.add.text(NATIVE_W / 2, 50, 'CALIFORNIA CRUISER', {
-            fontSize: '32px', fontFamily: 'monospace', color: '#ff6ec7',
-            stroke: '#000', strokeThickness: 4,
-            shadow: { offsetX: 2, offsetY: 2, color: '#ff00ff', blur: 8, fill: true }
-        }).setOrigin(0.5);
-
-        this.add.text(NATIVE_W / 2, 80, 'Throw vinyls. Build your rep. Own the boulevard.', {
-            fontSize: '10px', fontFamily: 'monospace', color: '#00ffff',
-            stroke: '#000', strokeThickness: 2
-        }).setOrigin(0.5);
-
-        const highScore = localStorage.getItem('california-cruiser-highscore') || 0;
-        if (highScore > 0) {
-            this.add.text(NATIVE_W / 2, 100, `HIGH SCORE: $${highScore}`, {
-                fontSize: '10px', fontFamily: 'monospace', color: '#ffff00',
-                stroke: '#000', strokeThickness: 2
-            }).setOrigin(0.5);
-        }
-
-        const startText = this.add.text(NATIVE_W / 2, NATIVE_H - 40, 'PRESS SPACE TO START', {
-            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
-            stroke: '#000', strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.tweens.add({ targets: startText, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
-
-        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Game'));
-    }
-
-    update() {
-        this.bgBack.tilePositionX += 0.1;
-        this.bgSun.tilePositionX += 0.15;
-        this.bgBuildings.tilePositionX += 0.3;
-        this.bgPalms.tilePositionX += 0.5;
-        this.bgHighway.tilePositionX += 1;
-    }
-}
-
-// ============================================================
-// Game Scene — Full gameplay
-// ============================================================
-class GameScene extends Phaser.Scene {
+export default class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
 
     create() {
@@ -240,7 +70,6 @@ class GameScene extends Phaser.Scene {
     }
 
     createAnimations() {
-        // Fan walk/catch animations
         for (let v = 1; v <= 3; v++) {
             if (!this.anims.exists(`fan-walk-${v}`)) {
                 this.anims.create({
@@ -258,7 +87,6 @@ class GameScene extends Phaser.Scene {
                 });
             }
         }
-        // Hater special/hurt animations (variants 1 & 3)
         for (const v of [1, 3]) {
             if (!this.anims.exists(`hater-throw-${v}`)) {
                 this.anims.create({
@@ -275,13 +103,11 @@ class GameScene extends Phaser.Scene {
                 });
             }
         }
-        // Car driving
         if (!this.anims.exists('car-driving')) {
             const carFrames = [];
             for (let i = 1; i <= 5; i++) carFrames.push({ key: `car-run-${i}` });
             this.anims.create({ key: 'car-driving', frames: carFrames, frameRate: 10, repeat: -1 });
         }
-        // Rival car
         if (!this.anims.exists('rival-driving')) {
             const rivalFrames = [];
             for (let i = 1; i <= 4; i++) rivalFrames.push({ key: `black-car-${i}` });
@@ -326,7 +152,6 @@ class GameScene extends Phaser.Scene {
         hater.setData('throwCooldown', Phaser.Math.Between(2000, 4000));
         hater.setData('lastThrow', 0);
 
-        // Red indicator circle above head
         const indicator = this.add.circle(0, -85, 4, 0xff0000).setDepth(5);
         hater.setData('indicator', indicator);
 
@@ -352,27 +177,22 @@ class GameScene extends Phaser.Scene {
         const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
         const y = Phaser.Utils.Array.GetRandom(lanes) - 20;
 
-        // Decide what to spawn
         const roll = Math.random();
         let pickupKey, pickupType, pickupValue;
 
         if (roll < 0.30) {
-            // Vinyl refill (30%)
             pickupKey = 'vinyl';
             pickupType = 'vinyl';
             pickupValue = 3;
         } else if (roll < 0.35) {
-            // Microphone power-up (5%)
             pickupKey = 'microphone';
             pickupType = 'microphone';
             pickupValue = 0;
         } else if (roll < 0.45) {
-            // Cash dollar (10%)
             pickupKey = 'dollar';
             pickupType = 'cash';
             pickupValue = 50;
         } else {
-            // Bonus retro item (55%)
             const item = Phaser.Utils.Array.GetRandom(BONUS_PICKUPS);
             pickupKey = item.key;
             pickupType = 'cash';
@@ -386,7 +206,6 @@ class GameScene extends Phaser.Scene {
         pickup.setData('key', pickupKey);
         pickup.setDepth(5);
 
-        // Bob animation
         this.tweens.add({
             targets: pickup, y: y - 4, duration: 400,
             yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
@@ -397,7 +216,6 @@ class GameScene extends Phaser.Scene {
 
     spawnRivalCar() {
         if (this.gameOver) return;
-        // Spawn in one of the two road lanes
         const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
         const y = Phaser.Utils.Array.GetRandom(lanes);
 
@@ -406,7 +224,7 @@ class GameScene extends Phaser.Scene {
         rival.setDepth(9);
         rival.setData('speed', this.scrollSpeed + 100);
         rival.setData('hit', false);
-        rival.flipX = true; // Face left (coming toward player)
+        rival.flipX = true;
 
         this.rivalCars.add(rival);
     }
@@ -419,9 +237,8 @@ class GameScene extends Phaser.Scene {
         hater.setData('throwing', true);
         const variant = hater.getData('variant');
         hater.play(`hater-throw-${variant}`);
-        hater.setData('speed', 0); // Stop while throwing
+        hater.setData('speed', 0);
 
-        // Spawn bottle mid-animation
         this.time.delayedCall(600, () => {
             if (!hater.active || hater.getData('converted')) return;
 
@@ -430,15 +247,10 @@ class GameScene extends Phaser.Scene {
             bottle.setDepth(8);
 
             this.activeBottles.push({
-                sprite: bottle,
-                vx: -80,
-                vy: 60,
-                gravity: 120,
-                active: true
+                sprite: bottle, vx: -80, vy: 60, gravity: 120, active: true
             });
         });
 
-        // Resume walking after throw animation
         this.time.delayedCall(1300, () => {
             if (!hater.active || hater.getData('converted')) return;
             hater.setData('throwing', false);
@@ -463,15 +275,12 @@ class GameScene extends Phaser.Scene {
         vinyl.setScale(0.7);
         vinyl.setDepth(8);
 
-        if (this.isGoldRecord) {
-            vinyl.setTint(0xffd700); // Gold tint
-        }
+        if (this.isGoldRecord) vinyl.setTint(0xffd700);
 
         const throwSpeed = 200;
         let vx = throwSpeed * 0.7;
         let vy = -throwSpeed * 0.8;
 
-        // GOLD RECORD auto-aim: find nearest fan/hater and aim toward them
         if (this.isGoldRecord) {
             const target = this.findNearestTarget();
             if (target) {
@@ -516,7 +325,6 @@ class GameScene extends Phaser.Scene {
         this.updateHUD();
         this.isInvincible = true;
 
-        // Flash red
         this.player.setTint(0xff0000);
         this.tweens.add({
             targets: this.player, alpha: 0.3, duration: 100,
@@ -528,21 +336,17 @@ class GameScene extends Phaser.Scene {
             }
         });
 
-        if (this.hp <= 0) {
-            this.triggerGameOver();
-        }
+        if (this.hp <= 0) this.triggerGameOver();
     }
 
     triggerGameOver() {
         this.gameOver = true;
 
-        // Save high score
         const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
         if (this.cash > prev) {
             localStorage.setItem('california-cruiser-highscore', this.cash);
         }
 
-        // Stop all timers
         this.fanTimer.remove();
         this.haterTimer.remove();
         this.jaywalkerTimer.remove();
@@ -567,7 +371,6 @@ class GameScene extends Phaser.Scene {
         if (this.micActive) amount *= 2;
         this.rep = Math.min(REP_MAX, this.rep + amount);
 
-        // Check segment bonuses
         const currentSegment = Math.floor(this.rep / REP_PER_SEGMENT);
         while (this.lastSegmentAwarded < currentSegment && this.lastSegmentAwarded < REP_SEGMENTS) {
             const bonus = REP_SEGMENT_BONUSES[this.lastSegmentAwarded];
@@ -576,7 +379,6 @@ class GameScene extends Phaser.Scene {
             this.lastSegmentAwarded++;
         }
 
-        // GOLD RECORD mode when full
         if (this.rep >= REP_MAX && !this.isGoldRecord) {
             this.activateGoldRecord();
         }
@@ -587,8 +389,6 @@ class GameScene extends Phaser.Scene {
     activateGoldRecord() {
         this.isGoldRecord = true;
         this.showFloatText(NATIVE_W / 2, 60, 'GOLD RECORD!', '#ffd700');
-
-        // Gold tint on car
         this.player.setTint(0xffd700);
 
         this.time.delayedCall(GOLD_RECORD_DURATION, () => {
@@ -624,7 +424,6 @@ class GameScene extends Phaser.Scene {
 
             let hit = false;
 
-            // Check fans
             if (v.sprite.y >= SIDEWALK_Y - 60 && v.sprite.y <= SIDEWALK_Y + 30) {
                 for (const fan of this.fans.getChildren()) {
                     if (!fan.active || fan.getData('caught')) continue;
@@ -691,11 +490,9 @@ class GameScene extends Phaser.Scene {
 
         const variant = hater.getData('variant');
 
-        // Remove red indicator
         const indicator = hater.getData('indicator');
         if (indicator) indicator.destroy();
 
-        // Play hurt then catch
         hater.play(`hater-hurt-${variant}`);
         hater.setData('speed', 0);
 
@@ -724,7 +521,6 @@ class GameScene extends Phaser.Scene {
             b.sprite.y += b.vy * dt;
             b.sprite.angle += 300 * dt;
 
-            // Check if bottle hit player
             const dx = Math.abs(b.sprite.x - this.player.x);
             const dy = Math.abs(b.sprite.y - (this.player.y - 25));
             if (dx < 50 && dy < 25) {
@@ -734,7 +530,6 @@ class GameScene extends Phaser.Scene {
                 continue;
             }
 
-            // Off screen
             if (b.sprite.y > NATIVE_H + 20 || b.sprite.x < -30) {
                 b.sprite.destroy(); b.active = false;
             }
@@ -766,7 +561,6 @@ class GameScene extends Phaser.Scene {
                 Math.abs(pickup.y - (this.player.y - 20)) < 25) {
                 const type = pickup.getData('type');
                 const value = pickup.getData('value');
-                const key = pickup.getData('key');
 
                 if (type === 'vinyl') {
                     this.vinylAmmo += value;
@@ -797,7 +591,6 @@ class GameScene extends Phaser.Scene {
                 this.takeDamage(2);
                 this.showFloatText(this.player.x, this.player.y - 70, '-2 HP!', '#ff0000');
 
-                // Knockback — push player to other road lane
                 const knockY = this.player.y < (ROAD_TOP_Y + ROAD_BOTTOM_Y) / 2 ? ROAD_BOTTOM_Y : ROAD_TOP_Y;
                 this.tweens.add({
                     targets: this.player, y: knockY, duration: 200, ease: 'Power2'
@@ -815,35 +608,31 @@ class GameScene extends Phaser.Scene {
         this.ammoText = this.add.text(NATIVE_W - 10, 26, 'VINYL: 15', { ...s, color: '#ff6ec7' }).setOrigin(1, 0).setDepth(20);
         this.accuracyText = this.add.text(NATIVE_W - 10, 40, 'ACC: ---', { ...s, color: '#00ffff' }).setOrigin(1, 0).setDepth(20);
 
-        // HP icons
         this.hpIcons = [];
         for (let i = 0; i < this.maxHp; i++) {
-            const icon = this.add.text(10 + i * 14, NATIVE_H - 16, '♥', {
+            const icon = this.add.text(10 + i * 14, NATIVE_H - 16, '\u2665', {
                 fontSize: '12px', fontFamily: 'monospace', color: '#ff0044', stroke: '#000', strokeThickness: 2
             }).setDepth(20);
             this.hpIcons.push(icon);
         }
 
-        // REP meter — 5-segment vertical bar on left
         this.repSegments = [];
         const colors = [0x44ff44, 0x88ff44, 0xffff00, 0xff8800, 0xff0044];
         for (let i = 0; i < REP_SEGMENTS; i++) {
             const y = 70 - i * 12;
             const bg = this.add.rectangle(14, y, 20, 10, 0x333333).setOrigin(0.5).setDepth(20);
             const fill = this.add.rectangle(14, y, 20, 10, colors[i]).setOrigin(0.5).setDepth(20);
-            fill.setScale(1, 0); // Start empty
+            fill.setScale(1, 0);
             this.repSegments.push({ bg, fill, color: colors[i] });
         }
         this.repLabel = this.add.text(14, 78, 'REP', {
             fontSize: '7px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5).setDepth(20);
 
-        // Mic active indicator
         this.micText = this.add.text(NATIVE_W / 2, 8, '2x REP!', {
             fontSize: '12px', fontFamily: 'monospace', color: '#ff6ec7', stroke: '#000', strokeThickness: 3
         }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
 
-        // Gold record text
         this.goldText = this.add.text(NATIVE_W / 2, 22, 'GOLD RECORD!', {
             fontSize: '10px', fontFamily: 'monospace', color: '#ffd700', stroke: '#000', strokeThickness: 3
         }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
@@ -855,12 +644,10 @@ class GameScene extends Phaser.Scene {
         const acc = this.vinylsThrown > 0 ? Math.round((this.vinylsHit / this.vinylsThrown) * 100) : 0;
         this.accuracyText.setText(`ACC: ${this.vinylsThrown > 0 ? acc + '%' : '---'}`);
 
-        // HP
         for (let i = 0; i < this.maxHp; i++) {
             this.hpIcons[i].setAlpha(i < this.hp ? 1 : 0.2);
         }
 
-        // REP meter segments
         const repPerSeg = REP_PER_SEGMENT;
         for (let i = 0; i < REP_SEGMENTS; i++) {
             const segStart = i * repPerSeg;
@@ -868,7 +655,6 @@ class GameScene extends Phaser.Scene {
             this.repSegments[i].fill.setScale(1, segProgress);
         }
 
-        // Mic active
         this.micText.setAlpha(this.micActive ? 1 : 0);
         this.goldText.setAlpha(this.isGoldRecord ? 1 : 0);
     }
@@ -896,10 +682,8 @@ class GameScene extends Phaser.Scene {
     // ========== DIFFICULTY RAMP ==========
 
     updateDifficulty() {
-        // Gradual speed increase
         this.scrollSpeed = BASE_SCROLL_SPEED + (this.gameTime * 1.5);
 
-        // Spawn rate adjustments (decrease delays = more spawns)
         const fanDelay = Math.max(800, 1800 - this.gameTime * 10);
         const haterDelay = Math.max(2500, 6000 - this.gameTime * 20);
         const jayDelay = Math.max(2000, 4000 - this.gameTime * 10);
@@ -949,11 +733,9 @@ class GameScene extends Phaser.Scene {
             const spd = hater.getData('speed') || 0;
             hater.x -= (spd + this.scrollSpeed * 0.3) * dt;
 
-            // Update indicator position
             const ind = hater.getData('indicator');
             if (ind && ind.active) { ind.x = hater.x; ind.y = hater.y - 85; }
 
-            // Throw bottle periodically
             if (!hater.getData('converted') && !hater.getData('throwing') && hater.x < NATIVE_W - 50) {
                 const lastThrow = hater.getData('lastThrow') || 0;
                 const cooldown = hater.getData('throwCooldown') || 3000;
@@ -990,11 +772,9 @@ class GameScene extends Phaser.Scene {
             if (rival.x < -200) rival.destroy();
         }
 
-        // Update projectiles
+        // Update projectiles & collisions
         this.checkVinylHits(dt);
         this.checkBottleHits(dt);
-
-        // Collision checks
         this.checkJaywalkerCollisions();
         this.checkPickupCollisions();
         this.checkRivalCarCollisions();
@@ -1012,68 +792,3 @@ class GameScene extends Phaser.Scene {
         }
     }
 }
-
-// ============================================================
-// Game Over Scene
-// ============================================================
-class GameOverScene extends Phaser.Scene {
-    constructor() { super('GameOver'); }
-
-    create(data) {
-        this.cameras.main.setBackgroundColor('#1a0a2e');
-
-        this.add.text(NATIVE_W / 2, 30, 'WRECKED', {
-            fontSize: '36px', fontFamily: 'monospace', color: '#ff0044',
-            stroke: '#000', strokeThickness: 5,
-            shadow: { offsetX: 2, offsetY: 2, color: '#ff0000', blur: 10, fill: true }
-        }).setOrigin(0.5);
-
-        const stats = [
-            `CASH: $${data.cash}`,
-            `ACCURACY: ${data.accuracy}%  (${data.vinylsHit}/${data.vinylsThrown})`,
-            `REP: ${data.rep}`,
-            `TIME: ${data.time}s`,
-        ];
-
-        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
-        const isNew = data.cash >= highScore && data.cash > 0;
-        if (isNew) stats.push('', 'NEW HIGH SCORE!');
-        stats.push('', `HIGH SCORE: $${highScore}`);
-
-        this.add.text(NATIVE_W / 2, 90, stats.join('\n'), {
-            fontSize: '10px', fontFamily: 'monospace', color: '#ffffff',
-            stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
-        }).setOrigin(0.5, 0);
-
-        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 30, 'PRESS SPACE TO RETRY', {
-            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
-            stroke: '#000', strokeThickness: 2
-        }).setOrigin(0.5);
-
-        this.tweens.add({ targets: retry, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
-
-        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Title'));
-    }
-}
-
-// ============================================================
-// Phaser Config
-// ============================================================
-const config = {
-    type: Phaser.AUTO,
-    width: NATIVE_W,
-    height: NATIVE_H,
-    pixelArt: true,
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        zoom: SCALE
-    },
-    physics: {
-        default: 'arcade',
-        arcade: { gravity: { y: 0 }, debug: false }
-    },
-    scene: [BootScene, TitleScene, GameScene, GameOverScene]
-};
-
-const game = new Phaser.Game(config);
