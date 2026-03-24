@@ -75,7 +75,7 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 Used for: parallax background layers (sun, buildings, palms, highway) and car sprites.
 
-### Character Sprites — Free Homeless Character Sprite Sheets
+### Character Sprites
 
 - **Author:** [CraftPix.net](https://craftpix.net)
 - **License:** [CraftPix File License](https://craftpix.net/file-licenses/) — free for personal and commercial use, no attribution required
