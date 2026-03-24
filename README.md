@@ -81,7 +81,7 @@ Used for: parallax background layers (sun, buildings, palms, highway) and car sp
 - **License:** [CraftPix File License](https://craftpix.net/file-licenses/) — free for personal and commercial use, no attribution required
 - **Source:** [craftpix.net](https://craftpix.net)
 
-Used for: fan and hater NPC animations (walk, attack, hurt, special).
+Used for: Characterts & NPC animations (walk, attack, hurt, special).
 
 ### Retro Item Sprites
 
