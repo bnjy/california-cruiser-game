@@ -1,6 +1,7 @@
 # Default ignored files
 /shelf/
-/.idea/workspace.xml
+# Intellij IDE stuff
+/.idea/
 # Ignored default folder with query files
 /queries/
 # Datasource local storage ignored files
@@ -8,8 +9,6 @@
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/
-# Intellij IDE stuff
-.idea
 
 # Logs
 logs
