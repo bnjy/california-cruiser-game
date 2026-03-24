@@ -22,4 +22,4 @@ const config = {
     scene: [BootScene, TitleScene, GameScene, GameOverScene, PauseScene]
 };
 
-const game = new Phaser.Game(config);
+new Phaser.Game(config);

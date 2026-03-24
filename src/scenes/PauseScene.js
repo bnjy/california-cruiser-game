@@ -4,6 +4,10 @@ export default class PauseScene extends Phaser.Scene {
     constructor() { super('Pause'); }
 
     create() {
+        // Pause music
+        const bgm = this.sound.get('bgm');
+        if (bgm?.isPlaying) bgm.pause();
+
         // Semi-transparent overlay
         this.add.rectangle(NATIVE_W / 2, NATIVE_H / 2, NATIVE_W, NATIVE_H, 0x000000, 0.7);
 
@@ -59,6 +63,8 @@ export default class PauseScene extends Phaser.Scene {
     }
 
     resume() {
+        const bgm = this.sound.get('bgm');
+        if (bgm?.isPaused) bgm.resume();
         this.scene.resume('Game');
         this.scene.stop();
     }

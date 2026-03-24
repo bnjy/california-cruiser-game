@@ -7,8 +7,8 @@ import {
 } from '../scoring.js';
 
 describe('fanCashReward', () => {
-    it('returns 100', () => {
-        expect(fanCashReward()).toBe(100);
+    it('returns 10', () => {
+        expect(fanCashReward()).toBe(10);
     });
 });
 

@@ -16,7 +16,7 @@ export const PLAYER_MAX_Y = ROAD_BOTTOM_Y;
 export const PLAYER_SPEED = 120;
 export const BASE_SCROLL_SPEED = 80;
 
-// REP meter
+// Reputation meter
 export const REP_PER_SEGMENT = 20;
 export const REP_SEGMENTS = 5;
 export const REP_MAX = REP_PER_SEGMENT * REP_SEGMENTS;

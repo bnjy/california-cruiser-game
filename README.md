@@ -1,6 +1,6 @@
 # California Cruiser
 
-A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports car along a California boulevard at sunset, throwing vinyl records at fans to earn cash. Dodge haters and a rival rapper's car. Cash earned is your score.
+A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports car along a California boulevard at sunset, throwing vinyl records at hip-hop heads to earn cash. Dodge taggers and a rival rapper's car. Cash earned is your score.
 
 **Inspired by childhood gaming memories such as** TMNT: Turtles in Time, Super Star Wars, Mega Man 7
 
@@ -22,11 +22,11 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ### Gameplay
 
-- Throw vinyl records at fans walking the sidewalk to earn cash
+- Throw vinyl records at hip-hop heads walking the sidewalk to earn cash
 - Catch vinyl pickups on the road to replenish ammo (+3)
-- Avoid hater bottles (1 HP damage) and the rival rapper's car (2 HP damage)
-- Hit haters with vinyls to convert them into fans for 2x rewards
-- Fill the REPUTATION meter to unlock **GOLD RECORD** mode (auto-aim, 3x cash)
+- Dodge tagger bottles and the rival rapper's car — both deal 1 HP damage
+- Hit taggers with vinyls to convert them and earn bonus cash
+- Fill the REPUTATION meter — each segment unlocks a cash bonus
 - Grab microphones for 2x REPUTATION gain
 - Collect retro bonus items (cassettes, VHS tapes, cameras, etc.) for extra cash
 - Difficulty ramps over time — survive as long as you can
@@ -45,11 +45,16 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 ├── src/
 │   ├── main.js             Phaser game initialization
 │   ├── config.js           Game constants & configuration
-│   └── scenes/
-│       ├── BootScene.js    Asset preloading
-│       ├── TitleScene.js   Title screen
-│       ├── GameScene.js    Main game loop
-│       └── GameOverScene.js
+│   ├── scenes/
+│   │   ├── BootScene.js    Asset preloading
+│   │   ├── TitleScene.js   Title screen
+│   │   ├── GameScene.js    Main game loop
+│   │   ├── PauseScene.js   Pause menu
+│   │   └── GameOverScene.js
+│   └── logic/              Pure functions (unit tested)
+│       ├── scoring.js      Cash/rep rewards, accuracy
+│       ├── difficulty.js   Speed and spawn rate curves
+│       └── rep.js          REP meter math and segment bonuses
 ├── assets/                 Game-ready sprites
 │   ├── cars/               Player & rival car frames
 │   ├── characters/         NPC sprite sheets

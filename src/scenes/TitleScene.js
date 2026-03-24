@@ -28,9 +28,9 @@ export default class TitleScene extends Phaser.Scene {
 
         // --- Typewriter narrative ---
         const storyLines = [
-            "You're an underground hip-hop artist...",
-            "Cruising the boulevard in your ride...",
-            "Throwing your new mixtape to the people...",
+            "You're an underground hip-hop artist.",
+            "Cruising the boulevard in the city of Angels.",
+            "Throwing your new mixtape to the people.",
             "They hear it. Your reputation grows.",
         ];
         const fullText = storyLines.join('\n');
@@ -66,7 +66,7 @@ export default class TitleScene extends Phaser.Scene {
 
         // --- Start prompt (hidden until typewriter finishes) ---
         this.startText = this.add.text(NATIVE_W / 2, NATIVE_H - 40, 'PRESS SPACE TO START', {
-            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
+            fontSize: '14px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5).setAlpha(0).setDepth(10);
 
@@ -81,7 +81,10 @@ export default class TitleScene extends Phaser.Scene {
         });
 
         // --- Background music ---
-        if (!this.sound.get('bgm')?.isPlaying) {
+        const bgm = this.sound.get('bgm');
+        if (bgm?.isPaused) {
+            bgm.resume();
+        } else if (!bgm?.isPlaying) {
             this.sound.play('bgm', { loop: true, volume: 0.4 });
         }
 
@@ -113,10 +116,12 @@ export default class TitleScene extends Phaser.Scene {
 
     spawnTitleFan() {
         const variant = Phaser.Math.Between(1, 3);
-        const fan = this.add.sprite(NATIVE_W + 20, SIDEWALK_Y, `cityman${variant}-walk`)
+        const fan = this.add.sprite(NATIVE_W + 60, SIDEWALK_Y, `cityman${variant}-walk`)
             .setOrigin(0.5, 1)
+            .setScale(0.7)
             .play(`fan-walk-${variant}`);
-        fan.setData('speed', Phaser.Math.Between(20, 40));
+        fan.flipX = true;
+        fan.setData('speed', Phaser.Math.Between(30, 60));
         this.titleFans.push(fan);
     }
 

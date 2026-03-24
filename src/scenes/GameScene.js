@@ -3,7 +3,7 @@ import {
     SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y,
     PLAYER_START_X, PLAYER_MIN_X, PLAYER_MAX_X, PLAYER_MIN_Y, PLAYER_MAX_Y, PLAYER_SPEED,
     BASE_SCROLL_SPEED,
-    REP_PER_SEGMENT, REP_SEGMENTS, REP_SEGMENT_BONUSES,
+    REP_SEGMENTS,
     BONUS_PICKUPS,
 } from '../config.js';
 import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, calcAccuracy, formatAccuracy, isHighScore } from '../logic/scoring.js';
@@ -339,7 +339,6 @@ export default class GameScene extends Phaser.Scene {
         const bonuses = segmentBonuses(this.lastSegmentAwarded, currentSegment);
         for (const bonus of bonuses) {
             this.cash += bonus;
-            this.showFloatText(80, 30, `+$${bonus} REPUTATION BONUS!`, '#ffff00');
         }
         this.lastSegmentAwarded = Math.max(this.lastSegmentAwarded, currentSegment);
 
@@ -489,14 +488,15 @@ export default class GameScene extends Phaser.Scene {
 
                 if (type === 'vinyl') {
                     this.vinylAmmo += value;
-                    this.showFloatText(pickup.x, pickup.y - 10, `+${value} VINYL`, '#ff6ec7');
+                    this.showFloatText(Math.round(pickup.x), Math.round(pickup.y) - 30, `+${value} VINYL`);
                 } else if (type === 'microphone') {
                     this.activateMicrophone();
                 } else if (type === 'cash') {
                     this.cash += value;
-                    this.showFloatText(pickup.x, pickup.y - 10, `+$${value}`, '#00ff00');
+                    this.showFloatText(Math.round(pickup.x), Math.round(pickup.y) - 10, `+$${value}`, '#00ff00');
                 }
 
+                pickup.setActive(false);
                 this.updateHUD();
                 this.tweens.add({
                     targets: pickup, scaleX: pickup.scaleX * 1.5, scaleY: pickup.scaleY * 1.5,
@@ -513,8 +513,8 @@ export default class GameScene extends Phaser.Scene {
             const dy = Math.abs(rival.y - this.player.y);
             if (dx < 70 && dy < 20) {
                 rival.setData('hit', true);
-                this.takeDamage(2);
-                this.showFloatText(this.player.x, this.player.y - 70, '-2 HP!', '#ff0000');
+                this.takeDamage(1);
+                this.showFloatText(this.player.x, this.player.y - 70, '-1 HP!', '#ff0000');
 
                 const knockY = this.player.y < (ROAD_TOP_Y + ROAD_BOTTOM_Y) / 2 ? ROAD_BOTTOM_Y : ROAD_TOP_Y;
                 this.tweens.add({
@@ -541,9 +541,9 @@ export default class GameScene extends Phaser.Scene {
             this.hpIcons.push(icon);
         }
 
-        this.repLabel = this.add.text(8, 8, 'REPUTATION', {
-            fontSize: '8px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
-        }).setOrigin(0, 0).setDepth(20);
+        this.repLabel = this.add.text(8, 10, 'REPUTATION', {
+            fontSize: '10px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
+        }).setOrigin(0, 0.5).setDepth(20);
 
         this.repSegments = [];
         const colors = [0x44ff44, 0x88ff44, 0xffff00, 0xff8800, 0xff0044];
@@ -585,7 +585,7 @@ export default class GameScene extends Phaser.Scene {
 
     showFloatText(x, y, message, color = '#00ff00') {
         const text = this.add.text(x, y, message, {
-            fontSize: '12px', fontFamily: 'monospace', color, stroke: '#000', strokeThickness: 2
+            fontSize: '12px', fontFamily: 'monospace', color
         }).setOrigin(0.5).setDepth(25);
         this.tweens.add({
             targets: text, y: y - 40, alpha: 0, duration: 1800,

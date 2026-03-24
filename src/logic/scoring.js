@@ -3,7 +3,7 @@
  */
 
 export function fanCashReward() {
-    return 100;
+    return 10;
 }
 
 export function haterCashReward() {
