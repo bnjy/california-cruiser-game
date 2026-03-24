@@ -62,6 +62,9 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('dice1', 'assets/items/dice1.png');
         this.load.image('crayon', 'assets/items/crayon.png');
         this.load.image('remote', 'assets/items/remote.png');
+
+        // Audio
+        this.load.audio('bgm', 'assets/sound/663445__seth_makes_sounds__chippy-song-thing.wav');
     }
 
     create() {

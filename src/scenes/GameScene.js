@@ -3,9 +3,12 @@ import {
     SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y,
     PLAYER_START_X, PLAYER_MIN_X, PLAYER_MAX_X, PLAYER_MIN_Y, PLAYER_MAX_Y, PLAYER_SPEED,
     BASE_SCROLL_SPEED,
-    REP_PER_SEGMENT, REP_SEGMENTS, REP_MAX, REP_SEGMENT_BONUSES, GOLD_RECORD_DURATION,
+    REP_PER_SEGMENT, REP_SEGMENTS, REP_SEGMENT_BONUSES,
     BONUS_PICKUPS,
 } from '../config.js';
+import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, calcAccuracy, formatAccuracy, isHighScore } from '../logic/scoring.js';
+import { calcScrollSpeed, calcFanDelay, calcHaterDelay, calcRivalCarDelay, shouldDrainRep } from '../logic/difficulty.js';
+import { addRep as calcAddRep, calcSegment, segmentBonuses, calcSegmentProgress, applyRepPenalty } from '../logic/rep.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
@@ -23,7 +26,6 @@ export default class GameScene extends Phaser.Scene {
         this.scrollSpeed = BASE_SCROLL_SPEED;
         this.gameTime = 0;
         this.isInvincible = false;
-        this.isGoldRecord = false;
         this.micActive = false;
         this.micTimer = null;
         this.gameOver = false;
@@ -42,7 +44,6 @@ export default class GameScene extends Phaser.Scene {
         // --- Groups ---
         this.fans = this.add.group();
         this.haters = this.add.group();
-        this.jaywalkers = this.add.group();
         this.activeVinyls = [];
         this.activeBottles = [];
         this.roadPickups = this.add.group();
@@ -51,7 +52,6 @@ export default class GameScene extends Phaser.Scene {
         // --- Spawn timers ---
         this.fanTimer = this.time.addEvent({ delay: 1800, callback: this.spawnFan, callbackScope: this, loop: true });
         this.time.delayedCall(500, this.spawnFan, [], this);
-        this.jaywalkerTimer = this.time.addEvent({ delay: 4000, callback: this.spawnJaywalker, callbackScope: this, loop: true });
         this.haterTimer = this.time.addEvent({ delay: 6000, callback: this.spawnHater, callbackScope: this, loop: true });
         this.pickupTimer = this.time.addEvent({ delay: 3500, callback: this.spawnRoadPickup, callbackScope: this, loop: true });
         this.rivalCarTimer = this.time.addEvent({ delay: 20000, callback: this.spawnRivalCar, callbackScope: this, loop: true });
@@ -64,6 +64,7 @@ export default class GameScene extends Phaser.Scene {
         this.keyD = this.input.keyboard.addKey('D');
         this.spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.spaceBar.on('down', this.throwVinyl, this);
+        this.input.keyboard.on('keydown-ESC', this.pauseGame, this);
 
         // --- HUD ---
         this.createHUD();
@@ -158,20 +159,6 @@ export default class GameScene extends Phaser.Scene {
         this.haters.add(hater);
     }
 
-    spawnJaywalker() {
-        if (this.gameOver) return;
-        const variant = Phaser.Math.Between(1, 3);
-        const lanes = [SIDEWALK_Y, ROAD_TOP_Y, ROAD_BOTTOM_Y];
-        const y = Phaser.Utils.Array.GetRandom(lanes);
-        const jw = this.add.sprite(NATIVE_W + 60, y, `homeless${variant}-walk`).setOrigin(0.5, 1);
-        jw.setScale(0.55);
-        jw.play(`fan-walk-${variant}`);
-        jw.flipX = true;
-        jw.setData('speed', Phaser.Math.Between(20, 40));
-        jw.setData('hit', false);
-        this.jaywalkers.add(jw);
-    }
-
     spawnRoadPickup() {
         if (this.gameOver) return;
         const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
@@ -222,7 +209,7 @@ export default class GameScene extends Phaser.Scene {
         const rival = this.add.sprite(NATIVE_W + 150, y, 'black-car-1').setOrigin(0.5, 1);
         rival.play('rival-driving');
         rival.setDepth(9);
-        rival.setData('speed', this.scrollSpeed + 100);
+        rival.setData('speed', Math.min(this.scrollSpeed + 100, 280));
         rival.setData('hit', false);
         rival.flipX = true;
 
@@ -259,6 +246,14 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    // ========== PAUSE ==========
+
+    pauseGame() {
+        if (this.gameOver) return;
+        this.scene.pause();
+        this.scene.launch('Pause');
+    }
+
     // ========== VINYL THROWING ==========
 
     throwVinyl() {
@@ -275,45 +270,15 @@ export default class GameScene extends Phaser.Scene {
         vinyl.setScale(0.7);
         vinyl.setDepth(8);
 
-        if (this.isGoldRecord) vinyl.setTint(0xffd700);
-
         const throwSpeed = 200;
-        let vx = throwSpeed * 0.7;
-        let vy = -throwSpeed * 0.8;
-
-        if (this.isGoldRecord) {
-            const target = this.findNearestTarget();
-            if (target) {
-                const dx = target.x - startX;
-                const dy = (target.y - 40) - startY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const speed = 250;
-                vx = (dx / dist) * speed;
-                vy = (dy / dist) * speed * 0.6;
-            }
-        }
+        const vx = throwSpeed * 0.7;
+        const vy = -throwSpeed * 0.8;
 
         this.activeVinyls.push({
             sprite: vinyl, vx, vy,
-            gravity: this.isGoldRecord ? 150 : 320,
+            gravity: 320,
             active: true
         });
-    }
-
-    findNearestTarget() {
-        let nearest = null;
-        let nearestDist = Infinity;
-        const check = (group) => {
-            group.getChildren().forEach(t => {
-                if (!t.active) return;
-                if (t.getData('caught') || t.getData('converted')) return;
-                const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y);
-                if (d < nearestDist) { nearestDist = d; nearest = t; }
-            });
-        };
-        check(this.fans);
-        check(this.haters);
-        return nearest;
     }
 
     // ========== DAMAGE & HP ==========
@@ -343,13 +308,12 @@ export default class GameScene extends Phaser.Scene {
         this.gameOver = true;
 
         const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
-        if (this.cash > prev) {
+        if (isHighScore(this.cash, prev)) {
             localStorage.setItem('california-cruiser-highscore', this.cash);
         }
 
         this.fanTimer.remove();
         this.haterTimer.remove();
-        this.jaywalkerTimer.remove();
         this.pickupTimer.remove();
         this.rivalCarTimer.remove();
 
@@ -357,7 +321,7 @@ export default class GameScene extends Phaser.Scene {
             this.scene.start('GameOver', {
                 cash: this.cash,
                 rep: this.rep,
-                accuracy: this.vinylsThrown > 0 ? Math.round((this.vinylsHit / this.vinylsThrown) * 100) : 0,
+                accuracy: calcAccuracy(this.vinylsThrown, this.vinylsHit),
                 vinylsThrown: this.vinylsThrown,
                 vinylsHit: this.vinylsHit,
                 time: Math.floor(this.gameTime)
@@ -368,41 +332,22 @@ export default class GameScene extends Phaser.Scene {
     // ========== REP METER ==========
 
     addRep(amount) {
-        if (this.micActive) amount *= 2;
-        this.rep = Math.min(REP_MAX, this.rep + amount);
+        this.rep = calcAddRep(this.rep, amount, this.micActive);
 
-        const currentSegment = Math.floor(this.rep / REP_PER_SEGMENT);
-        while (this.lastSegmentAwarded < currentSegment && this.lastSegmentAwarded < REP_SEGMENTS) {
-            const bonus = REP_SEGMENT_BONUSES[this.lastSegmentAwarded];
+        const currentSegment = calcSegment(this.rep);
+        const bonuses = segmentBonuses(this.lastSegmentAwarded, currentSegment);
+        for (const bonus of bonuses) {
             this.cash += bonus;
-            this.showFloatText(80, 30, `+$${bonus} REP BONUS!`, '#ffff00');
-            this.lastSegmentAwarded++;
+            this.showFloatText(80, 30, `+$${bonus} REPUTATION BONUS!`, '#ffff00');
         }
-
-        if (this.rep >= REP_MAX && !this.isGoldRecord) {
-            this.activateGoldRecord();
-        }
+        this.lastSegmentAwarded = Math.max(this.lastSegmentAwarded, currentSegment);
 
         this.updateHUD();
     }
 
-    activateGoldRecord() {
-        this.isGoldRecord = true;
-        this.showFloatText(NATIVE_W / 2, 60, 'GOLD RECORD!', '#ffd700');
-        this.player.setTint(0xffd700);
-
-        this.time.delayedCall(GOLD_RECORD_DURATION, () => {
-            this.isGoldRecord = false;
-            this.player.clearTint();
-            this.rep = 0;
-            this.lastSegmentAwarded = 0;
-            this.updateHUD();
-        });
-    }
-
     activateMicrophone() {
         this.micActive = true;
-        this.showFloatText(this.player.x, this.player.y - 70, '2x REP!', '#ff6ec7');
+        this.showFloatText(this.player.x, this.player.y - 70, '2x REPUTATION!', '#ff6ec7');
         if (this.micTimer) this.micTimer.remove();
         this.micTimer = this.time.delayedCall(8000, () => {
             this.micActive = false;
@@ -456,8 +401,8 @@ export default class GameScene extends Phaser.Scene {
         fan.setData('caught', true);
         this.vinylsHit++;
 
-        const cashGain = this.isGoldRecord ? 300 : 100;
-        const repGain = 10;
+        const cashGain = fanCashReward();
+        const repGain = fanRepReward();
         this.cash += cashGain;
         this.addRep(repGain);
         this.updateHUD();
@@ -482,8 +427,8 @@ export default class GameScene extends Phaser.Scene {
         hater.setData('converted', true);
         this.vinylsHit++;
 
-        const cashGain = this.isGoldRecord ? 600 : 200;
-        const repGain = 25;
+        const cashGain = haterCashReward();
+        const repGain = haterRepReward();
         this.cash += cashGain;
         this.addRep(repGain);
         this.updateHUD();
@@ -536,24 +481,6 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    checkJaywalkerCollisions() {
-        for (const jw of [...this.jaywalkers.getChildren()]) {
-            if (!jw.active || jw.getData('hit')) continue;
-            const dx = Math.abs(jw.x - this.player.x);
-            const dy = Math.abs(jw.y - this.player.y);
-            if (dx < 45 && dy < 20) {
-                jw.setData('hit', true);
-                this.rep = Math.max(0, this.rep - 15);
-                this.updateHUD();
-                this.showFloatText(jw.x, jw.y - 50, '-15 REP', '#ff4444');
-                this.tweens.add({
-                    targets: jw, y: jw.y - 30, x: jw.x - 40, alpha: 0, angle: -90,
-                    duration: 400, onComplete: () => jw.destroy()
-                });
-            }
-        }
-    }
-
     checkPickupCollisions() {
         for (const pickup of [...this.roadPickups.getChildren()]) {
             if (!pickup.active) continue;
@@ -602,7 +529,7 @@ export default class GameScene extends Phaser.Scene {
     // ========== HUD ==========
 
     createHUD() {
-        const s = { fontSize: '10px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 3 };
+        const s = { fontSize: '12px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 3 };
 
         this.cashText = this.add.text(NATIVE_W - 10, 8, '$0', { ...s, fontSize: '14px', color: '#00ff00' }).setOrigin(1, 0).setDepth(20);
         this.ammoText = this.add.text(NATIVE_W - 10, 26, 'VINYL: 15', { ...s, color: '#ff6ec7' }).setOrigin(1, 0).setDepth(20);
@@ -616,57 +543,54 @@ export default class GameScene extends Phaser.Scene {
             this.hpIcons.push(icon);
         }
 
+        this.repLabel = this.add.text(8, 8, 'REPUTATION', {
+            fontSize: '8px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
+        }).setOrigin(0, 0).setDepth(20);
+
         this.repSegments = [];
         const colors = [0x44ff44, 0x88ff44, 0xffff00, 0xff8800, 0xff0044];
+        const barStartX = 82;
+        const barY = 10;
+        const segW = 24;
+        const segH = 8;
+        const gap = 2;
         for (let i = 0; i < REP_SEGMENTS; i++) {
-            const y = 70 - i * 12;
-            const bg = this.add.rectangle(14, y, 20, 10, 0x333333).setOrigin(0.5).setDepth(20);
-            const fill = this.add.rectangle(14, y, 20, 10, colors[i]).setOrigin(0.5).setDepth(20);
-            fill.setScale(1, 0);
+            const x = barStartX + i * (segW + gap);
+            const bg = this.add.rectangle(x, barY, segW, segH, 0x333333).setOrigin(0, 0.5).setDepth(20);
+            const fill = this.add.rectangle(x, barY, segW, segH, colors[i]).setOrigin(0, 0.5).setDepth(20);
+            fill.setScale(0, 1);
             this.repSegments.push({ bg, fill, color: colors[i] });
         }
-        this.repLabel = this.add.text(14, 78, 'REP', {
-            fontSize: '7px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 2
-        }).setOrigin(0.5).setDepth(20);
 
-        this.micText = this.add.text(NATIVE_W / 2, 8, '2x REP!', {
+        this.micText = this.add.text(NATIVE_W / 2, 8, '2x REPUTATION!', {
             fontSize: '12px', fontFamily: 'monospace', color: '#ff6ec7', stroke: '#000', strokeThickness: 3
-        }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
-
-        this.goldText = this.add.text(NATIVE_W / 2, 22, 'GOLD RECORD!', {
-            fontSize: '10px', fontFamily: 'monospace', color: '#ffd700', stroke: '#000', strokeThickness: 3
         }).setOrigin(0.5, 0).setDepth(20).setAlpha(0);
     }
 
     updateHUD() {
         this.cashText.setText(`$${this.cash}`);
         this.ammoText.setText(`VINYL: ${this.vinylAmmo}`);
-        const acc = this.vinylsThrown > 0 ? Math.round((this.vinylsHit / this.vinylsThrown) * 100) : 0;
-        this.accuracyText.setText(`ACC: ${this.vinylsThrown > 0 ? acc + '%' : '---'}`);
+        this.accuracyText.setText(`ACC: ${formatAccuracy(this.vinylsThrown, this.vinylsHit)}`);
 
         for (let i = 0; i < this.maxHp; i++) {
             this.hpIcons[i].setAlpha(i < this.hp ? 1 : 0.2);
         }
 
-        const repPerSeg = REP_PER_SEGMENT;
         for (let i = 0; i < REP_SEGMENTS; i++) {
-            const segStart = i * repPerSeg;
-            const segProgress = Math.max(0, Math.min(1, (this.rep - segStart) / repPerSeg));
-            this.repSegments[i].fill.setScale(1, segProgress);
+            this.repSegments[i].fill.setScale(calcSegmentProgress(this.rep, i), 1);
         }
 
         this.micText.setAlpha(this.micActive ? 1 : 0);
-        this.goldText.setAlpha(this.isGoldRecord ? 1 : 0);
     }
 
     // ========== EFFECTS ==========
 
     showFloatText(x, y, message, color = '#00ff00') {
         const text = this.add.text(x, y, message, {
-            fontSize: '10px', fontFamily: 'monospace', color, stroke: '#000', strokeThickness: 2
+            fontSize: '12px', fontFamily: 'monospace', color, stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5).setDepth(25);
         this.tweens.add({
-            targets: text, y: y - 30, alpha: 0, duration: 1000,
+            targets: text, y: y - 40, alpha: 0, duration: 1800,
             ease: 'Power2', onComplete: () => text.destroy()
         });
     }
@@ -674,25 +598,19 @@ export default class GameScene extends Phaser.Scene {
     showDollarFloat(x, y) {
         const dollar = this.add.image(x, y, 'dollar').setOrigin(0.5).setScale(0.15).setDepth(25);
         this.tweens.add({
-            targets: dollar, y: y - 40, alpha: 0, scaleX: 0.2, scaleY: 0.2,
-            duration: 1200, ease: 'Power2', onComplete: () => dollar.destroy()
+            targets: dollar, y: y - 50, alpha: 0, scaleX: 0.2, scaleY: 0.2,
+            duration: 2000, ease: 'Power2', onComplete: () => dollar.destroy()
         });
     }
 
     // ========== DIFFICULTY RAMP ==========
 
     updateDifficulty() {
-        this.scrollSpeed = BASE_SCROLL_SPEED + (this.gameTime * 1.5);
+        this.scrollSpeed = calcScrollSpeed(this.gameTime);
 
-        const fanDelay = Math.max(800, 1800 - this.gameTime * 10);
-        const haterDelay = Math.max(2500, 6000 - this.gameTime * 20);
-        const jayDelay = Math.max(2000, 4000 - this.gameTime * 10);
-        const rivalDelay = Math.max(8000, 20000 - this.gameTime * 80);
-
-        this.fanTimer.delay = fanDelay;
-        this.haterTimer.delay = haterDelay;
-        this.jaywalkerTimer.delay = jayDelay;
-        this.rivalCarTimer.delay = rivalDelay;
+        this.fanTimer.delay = calcFanDelay(this.gameTime);
+        this.haterTimer.delay = calcHaterDelay(this.gameTime);
+        this.rivalCarTimer.delay = calcRivalCarDelay(this.gameTime);
     }
 
     // ========== MAIN UPDATE ==========
@@ -751,13 +669,6 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-        // Move jaywalkers
-        for (const jw of [...this.jaywalkers.getChildren()]) {
-            if (!jw.active) continue;
-            jw.x -= (jw.getData('speed') + this.scrollSpeed * 0.5) * dt;
-            if (jw.x < -80) jw.destroy();
-        }
-
         // Move road pickups
         for (const pickup of [...this.roadPickups.getChildren()]) {
             if (!pickup.active) continue;
@@ -775,7 +686,6 @@ export default class GameScene extends Phaser.Scene {
         // Update projectiles & collisions
         this.checkVinylHits(dt);
         this.checkBottleHits(dt);
-        this.checkJaywalkerCollisions();
         this.checkPickupCollisions();
         this.checkRivalCarCollisions();
 
@@ -783,12 +693,9 @@ export default class GameScene extends Phaser.Scene {
         this.updateDifficulty();
 
         // REP drain if accuracy < 30%
-        if (this.vinylsThrown > 5) {
-            const acc = this.vinylsHit / this.vinylsThrown;
-            if (acc < 0.3) {
-                this.rep = Math.max(0, this.rep - 2 * dt);
-                this.updateHUD();
-            }
+        if (shouldDrainRep(this.vinylsThrown, this.vinylsHit)) {
+            this.rep = applyRepPenalty(this.rep, 2 * dt);
+            this.updateHUD();
         }
     }
 }

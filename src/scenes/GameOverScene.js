@@ -15,7 +15,7 @@ export default class GameOverScene extends Phaser.Scene {
         const stats = [
             `CASH: $${data.cash}`,
             `ACCURACY: ${data.accuracy}%  (${data.vinylsHit}/${data.vinylsThrown})`,
-            `REP: ${data.rep}`,
+            `REPUTATION: ${data.rep}`,
             `TIME: ${data.time}s`,
         ];
 
@@ -24,8 +24,8 @@ export default class GameOverScene extends Phaser.Scene {
         if (isNew) stats.push('', 'NEW HIGH SCORE!');
         stats.push('', `HIGH SCORE: $${highScore}`);
 
-        this.add.text(NATIVE_W / 2, 90, stats.join('\n'), {
-            fontSize: '10px', fontFamily: 'monospace', color: '#ffffff',
+        this.add.text(NATIVE_W / 2, 78, stats.join('\n'), {
+            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
         }).setOrigin(0.5, 0);
 

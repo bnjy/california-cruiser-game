@@ -9,8 +9,8 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ## How to Play
 
-1. Open `index.html` in a browser
-2. Press **Space** to start
+1. Run `npm run dev` and open in browser
+2. Read the story intro, then press **Space** to start
 
 ### Controls
 
@@ -25,8 +25,8 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 - Catch vinyl pickups on the road to replenish ammo (+3)
 - Avoid hater bottles (1 HP damage) and the rival rapper's car (2 HP damage)
 - Hit haters with vinyls to convert them into fans for 2x rewards
-- Fill the REP meter to unlock **GOLD RECORD** mode (auto-aim, 3x cash)
-- Grab microphones for 2x REP gain
+- Fill the REPUTATION meter to unlock **GOLD RECORD** mode (auto-aim, 3x cash)
+- Grab microphones for 2x REPUTATION gain
 - Collect retro bonus items (cassettes, VHS tapes, cameras, etc.) for extra cash
 - Difficulty ramps over time — survive as long as you can
 
@@ -53,7 +53,8 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 │   ├── cars/               Player & rival car frames
 │   ├── characters/         NPC sprite sheets
 │   ├── items/              Pickups & projectiles
-│   └── layers/             Parallax background layers
+│   ├── layers/             Parallax background layers
+│   └── sound/              Background music
 └── assetLibrary/           Original source assets
 ```
 
@@ -84,16 +85,20 @@ Used for: fan and hater NPC animations (walk, attack, hurt, special).
 
 Used for: bonus pickup items (vinyl, cassette, VHS, phone, Rubik's cube, dice, camera, etc.).
 
+### Background Music — Chippy Song Thing
+
+- **Author:** [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/)
+- **License:** [CC0 (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/)
+- **Source:** [freesound.org/s/663445](https://freesound.org/s/663445/)
+
+Used for: looping background music throughout the game.
+
 ## Development
 
-No build step required. Just serve the files:
-
 ```bash
-# Using Python
-python3 -m http.server 8000
-
-# Using Node
-npx serve .
+npm install        # Install dependencies
+npm run dev        # Start Vite dev server
+npm run build      # Production build
+npm test           # Run tests
+npm run lint       # Lint src/
 ```
-
-Then open `http://localhost:8000` in your browser.

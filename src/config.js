@@ -21,7 +21,6 @@ export const REP_PER_SEGMENT = 20;
 export const REP_SEGMENTS = 5;
 export const REP_MAX = REP_PER_SEGMENT * REP_SEGMENTS;
 export const REP_SEGMENT_BONUSES = [100, 200, 300, 500, 1000];
-export const GOLD_RECORD_DURATION = 5000;
 
 // Bonus pickup definitions
 export const BONUS_PICKUPS = [
