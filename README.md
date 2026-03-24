@@ -2,7 +2,7 @@
 
 A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports car along a California boulevard at sunset, throwing vinyl records at fans to earn cash. Dodge haters and a rival rapper's car. Cash earned is your score.
 
-**Vibe:** TMNT: Turtles in Time, Super Star Wars, Mega Man 7
+**Inspired by childhood gaming memories such as** TMNT: Turtles in Time, Super Star Wars, Mega Man 7
 
 ![Phaser 3](https://img.shields.io/badge/Phaser-3.80.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -14,10 +14,11 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ### Controls
 
-| Key | Action |
-|-----|--------|
+| Key               | Action              |
+|-------------------|---------------------|
 | Arrow keys / WASD | Move across 3 lanes |
-| Space | Throw vinyl record |
+| Space             | Throw vinyl record  |
+| Esc               | Pause/restart menu  |
 
 ### Gameplay
 
