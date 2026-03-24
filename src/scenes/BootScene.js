@@ -20,22 +20,22 @@ export default class BootScene extends Phaser.Scene {
             this.load.image(`black-car-${i}`, `assets/cars/black/${i}Rpix128.png`);
         }
 
-        // Pedestrian sprite sheets (128x128 per frame)
-        for (let h = 1; h <= 3; h++) {
-            this.load.spritesheet(`homeless${h}-walk`, `assets/characters/homeless${h}/Walk.png`, {
-                frameWidth: 128, frameHeight: 128
-            });
-            this.load.spritesheet(`homeless${h}-attack1`, `assets/characters/homeless${h}/Attack_1.png`, {
+        // Fan sprites — City Men (128x128 per frame)
+        for (let c = 1; c <= 3; c++) {
+            this.load.spritesheet(`cityman${c}-walk`, `assets/characters/cityman${c}/Walk.png`, {
                 frameWidth: 128, frameHeight: 128
             });
         }
-        // Hater-only animations (homeless 1 & 3)
-        for (const h of [1, 3]) {
-            this.load.spritesheet(`homeless${h}-hurt`, `assets/characters/homeless${h}/Hurt.png`, {
-                frameWidth: 128, frameHeight: 128
+        // Hater sprites — Graffiti Artists (256x256 per frame)
+        for (let g = 1; g <= 3; g++) {
+            this.load.spritesheet(`graffiti${g}-walk`, `assets/characters/graffiti${g}/Walk.png`, {
+                frameWidth: 256, frameHeight: 256
             });
-            this.load.spritesheet(`homeless${h}-special`, `assets/characters/homeless${h}/Special.png`, {
-                frameWidth: 128, frameHeight: 128
+            this.load.spritesheet(`graffiti${g}-hurt`, `assets/characters/graffiti${g}/Hurt_1.png`, {
+                frameWidth: 256, frameHeight: 256
+            });
+            this.load.spritesheet(`graffiti${g}-special`, `assets/characters/graffiti${g}/Special_Blow_1.png`, {
+                frameWidth: 256, frameHeight: 256
             });
         }
 

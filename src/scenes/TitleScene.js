@@ -94,7 +94,7 @@ export default class TitleScene extends Phaser.Scene {
             if (!this.anims.exists(`fan-walk-${v}`)) {
                 this.anims.create({
                     key: `fan-walk-${v}`,
-                    frames: this.anims.generateFrameNumbers(`homeless${v}-walk`, { start: 0, end: 7 }),
+                    frames: this.anims.generateFrameNumbers(`cityman${v}-walk`, { start: 0, end: 9 }),
                     frameRate: 10, repeat: -1
                 });
             }
@@ -113,7 +113,7 @@ export default class TitleScene extends Phaser.Scene {
 
     spawnTitleFan() {
         const variant = Phaser.Math.Between(1, 3);
-        const fan = this.add.sprite(NATIVE_W + 20, SIDEWALK_Y, `homeless${variant}-walk`)
+        const fan = this.add.sprite(NATIVE_W + 20, SIDEWALK_Y, `cityman${variant}-walk`)
             .setOrigin(0.5, 1)
             .play(`fan-walk-${variant}`);
         fan.setData('speed', Phaser.Math.Between(20, 40));

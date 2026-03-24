@@ -71,35 +71,36 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createAnimations() {
+        // Fan animations — City Men
         for (let v = 1; v <= 3; v++) {
             if (!this.anims.exists(`fan-walk-${v}`)) {
                 this.anims.create({
                     key: `fan-walk-${v}`,
-                    frames: this.anims.generateFrameNumbers(`homeless${v}-walk`, { start: 0, end: 7 }),
+                    frames: this.anims.generateFrameNumbers(`cityman${v}-walk`, { start: 0, end: 9 }),
                     frameRate: 10, repeat: -1
                 });
             }
-            if (!this.anims.exists(`fan-catch-${v}`)) {
-                const fc = v === 2 ? 10 : 5;
+        }
+        // Hater animations — Graffiti Artists
+        for (let v = 1; v <= 3; v++) {
+            if (!this.anims.exists(`hater-walk-${v}`)) {
                 this.anims.create({
-                    key: `fan-catch-${v}`,
-                    frames: this.anims.generateFrameNumbers(`homeless${v}-attack1`, { start: 0, end: fc - 1 }),
-                    frameRate: 12, repeat: 0
+                    key: `hater-walk-${v}`,
+                    frames: this.anims.generateFrameNumbers(`graffiti${v}-walk`, { start: 0, end: 9 }),
+                    frameRate: 10, repeat: -1
                 });
             }
-        }
-        for (const v of [1, 3]) {
             if (!this.anims.exists(`hater-throw-${v}`)) {
                 this.anims.create({
                     key: `hater-throw-${v}`,
-                    frames: this.anims.generateFrameNumbers(`homeless${v}-special`, { start: 0, end: 12 }),
+                    frames: this.anims.generateFrameNumbers(`graffiti${v}-special`, { start: 0, end: 9 }),
                     frameRate: 10, repeat: 0
                 });
             }
             if (!this.anims.exists(`hater-hurt-${v}`)) {
                 this.anims.create({
                     key: `hater-hurt-${v}`,
-                    frames: this.anims.generateFrameNumbers(`homeless${v}-hurt`, { start: 0, end: 2 }),
+                    frames: this.anims.generateFrameNumbers(`graffiti${v}-hurt`, { start: 0, end: 4 }),
                     frameRate: 10, repeat: 0
                 });
             }
@@ -128,7 +129,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.gameOver) return;
         const variant = Phaser.Math.Between(1, 3);
         const fanY = Phaser.Math.Between(SIDEWALK_Y - 5, SIDEWALK_Y + 5);
-        const fan = this.add.sprite(NATIVE_W + 60, fanY, `homeless${variant}-walk`).setOrigin(0.5, 1);
+        const fan = this.add.sprite(NATIVE_W + 60, fanY, `cityman${variant}-walk`).setOrigin(0.5, 1);
         fan.setScale(0.7);
         fan.play(`fan-walk-${variant}`);
         fan.flipX = true;
@@ -140,11 +141,11 @@ export default class GameScene extends Phaser.Scene {
 
     spawnHater() {
         if (this.gameOver) return;
-        const variant = Phaser.Utils.Array.GetRandom([1, 3]);
+        const variant = Phaser.Math.Between(1, 3);
         const haterY = Phaser.Math.Between(SIDEWALK_Y - 5, SIDEWALK_Y + 5);
-        const hater = this.add.sprite(NATIVE_W + 60, haterY, `homeless${variant}-walk`).setOrigin(0.5, 1);
-        hater.setScale(0.7);
-        hater.play(`fan-walk-${variant}`);
+        const hater = this.add.sprite(NATIVE_W + 60, haterY, `graffiti${variant}-walk`).setOrigin(0.5, 1);
+        hater.setScale(0.46);
+        hater.play(`hater-walk-${variant}`);
         hater.flipX = true;
         hater.setData('variant', variant);
         hater.setData('speed', Phaser.Math.Between(20, 40));
@@ -153,7 +154,7 @@ export default class GameScene extends Phaser.Scene {
         hater.setData('throwCooldown', Phaser.Math.Between(2000, 4000));
         hater.setData('lastThrow', 0);
 
-        const indicator = this.add.circle(0, -85, 4, 0xff0000).setDepth(5);
+        const indicator = this.add.circle(0, -70, 4, 0xff0000).setDepth(5);
         hater.setData('indicator', indicator);
 
         this.haters.add(hater);
@@ -242,7 +243,7 @@ export default class GameScene extends Phaser.Scene {
             if (!hater.active || hater.getData('converted')) return;
             hater.setData('throwing', false);
             hater.setData('speed', Phaser.Math.Between(20, 40));
-            hater.play(`fan-walk-${variant}`);
+            hater.play(`hater-walk-${variant}`);
         });
     }
 
@@ -407,8 +408,6 @@ export default class GameScene extends Phaser.Scene {
         this.addRep(repGain);
         this.updateHUD();
 
-        const variant = fan.getData('variant');
-        fan.play(`fan-catch-${variant}`);
         fan.setData('speed', 0);
 
         this.showDollarFloat(fan.x, fan.y - 60);
@@ -443,7 +442,6 @@ export default class GameScene extends Phaser.Scene {
 
         this.time.delayedCall(400, () => {
             if (!hater.active) return;
-            hater.play(`fan-catch-${variant}`);
             this.showDollarFloat(hater.x, hater.y - 60);
             this.showFloatText(hater.x, hater.y - 80, `+$${cashGain}`, '#00ff00');
             this.showFloatText(hater.x + 30, hater.y - 70, 'CONVERTED!', '#ff6ec7');
@@ -652,7 +650,7 @@ export default class GameScene extends Phaser.Scene {
             hater.x -= (spd + this.scrollSpeed * 0.3) * dt;
 
             const ind = hater.getData('indicator');
-            if (ind && ind.active) { ind.x = hater.x; ind.y = hater.y - 85; }
+            if (ind && ind.active) { ind.x = hater.x; ind.y = hater.y - 70; }
 
             if (!hater.getData('converted') && !hater.getData('throwing') && hater.x < NATIVE_W - 50) {
                 const lastThrow = hater.getData('lastThrow') || 0;
