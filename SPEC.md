@@ -27,7 +27,7 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 
 ## Mechanics
 
-**Vinyl Throwing** — 15 ammo to start. Fixed 45° arc from the car window. Vinyl pickups on the road grant +3.
+**Vinyl Throwing** — 15 ammo to start. Fixed 45° arc from the car window. Vinyl pickups on the road grant +5.
 
 **Fans** — Walk the sidewalk right-to-left. Hit by vinyl → celebrate, award cash + REPUTATION. Three speed tiers: slow ($100), medium ($150), fast ($200). Three character variants used randomly.
 
@@ -35,7 +35,9 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 
 **Rival Rapper Car** — Black car appears in your lane. 2 HP damage + knockback. Can't be destroyed — just dodge. Appears after ~45s, frequency increases.
 
-**Road Pickups** — Vinyl (+3 ammo), microphone (2x REPUTATION for 8s), cash dollar (+$50), plus assorted retro items for bonus cash.
+**Road Pickups** — Vinyl (+5 ammo), microphone (2x REPUTATION for 8s), cash dollar (+$50), plus assorted retro items for bonus cash.
+
+**Combo** — Consecutive catches build a cash multiplier: x2 at 3 hits in a row, x3 at 6. A missed vinyl resets the combo.
 
 **REPUTATION Meter** — 5-segment horizontal bar in the top-left corner. Fills from catches.
 
@@ -116,9 +118,9 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - [x] High score persistence (localStorage)
 - [x] Difficulty tuning pass
 - [x] Background music (looping chiptune track)
-- [ ] Sound effects (stretch)
+- [x] Sound effects (synthesized WebAudio chiptune SFX — throw, catch, convert, pickup, hurt, game over)
+- [x] Combo system (consecutive catches multiply cash; miss resets)
 - [ ] Mobile touch controls (stretch)
-- [ ] Combo system (stretch)
 
 **Playable Outcome:** Same core gameplay with polished visual feedback, persistent high scores, and optional sound/mobile support.
 
@@ -137,5 +139,6 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - `src/logic/scoring.js` — Cash/rep rewards, accuracy calculation, high score check.
 - `src/logic/difficulty.js` — Scroll speed, spawn delay curves, rep drain threshold.
 - `src/logic/rep.js` — REPUTATION addition, segment bonuses, penalties.
+- `src/logic/combo.js` — Combo multiplier thresholds.
 
 **Run:** `npm test` or `npx vitest` (watch mode).

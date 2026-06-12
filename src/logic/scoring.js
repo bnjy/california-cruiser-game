@@ -2,12 +2,15 @@
  * Pure scoring logic — no Phaser dependencies.
  */
 
-export function fanCashReward() {
-    return 10;
+import { FAN_TIERS } from '../config.js';
+
+export function fanCashReward(tier) {
+    return FAN_TIERS[tier].cash;
 }
 
-export function haterCashReward() {
-    return 200;
+// Converting a hater pays 2x the fan reward for its tier
+export function haterCashReward(tier) {
+    return fanCashReward(tier) * 2;
 }
 
 export function fanRepReward() {
@@ -15,7 +18,7 @@ export function fanRepReward() {
 }
 
 export function haterRepReward() {
-    return 25;
+    return fanRepReward() * 2;
 }
 
 export function calcAccuracy(thrown, hit) {

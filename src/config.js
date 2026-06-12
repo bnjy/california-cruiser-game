@@ -16,6 +16,13 @@ export const PLAYER_MAX_Y = ROAD_BOTTOM_Y;
 export const PLAYER_SPEED = 120;
 export const BASE_SCROLL_SPEED = 80;
 
+// Fan speed tiers — faster fans are harder to hit and pay more
+export const FAN_TIERS = [
+    { minSpeed: 25, maxSpeed: 35, cash: 100 },
+    { minSpeed: 40, maxSpeed: 50, cash: 150 },
+    { minSpeed: 55, maxSpeed: 70, cash: 200 },
+];
+
 // Reputation meter
 export const REP_PER_SEGMENT = 20;
 export const REP_SEGMENTS = 5;

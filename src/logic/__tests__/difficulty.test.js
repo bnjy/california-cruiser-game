@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     calcScrollSpeed, calcFanDelay, calcHaterDelay,
-    calcRivalCarDelay, shouldDrainRep,
+    calcRivalCarDelay, calcPickupDelay, shouldDrainRep,
 } from '../difficulty.js';
 
 describe('calcScrollSpeed', () => {
@@ -34,8 +34,11 @@ describe('calcHaterDelay', () => {
     it('starts at 6000ms', () => {
         expect(calcHaterDelay(0)).toBe(6000);
     });
-    it('floors at 2500ms', () => {
-        expect(calcHaterDelay(300)).toBe(2500);
+    it('decreases with time', () => {
+        expect(calcHaterDelay(50)).toBe(4000);
+    });
+    it('floors at 2000ms', () => {
+        expect(calcHaterDelay(300)).toBe(2000);
     });
 });
 
@@ -43,8 +46,23 @@ describe('calcRivalCarDelay', () => {
     it('starts at 25000ms', () => {
         expect(calcRivalCarDelay(0)).toBe(25000);
     });
-    it('floors at 10000ms', () => {
-        expect(calcRivalCarDelay(300)).toBe(10000);
+    it('decreases with time', () => {
+        expect(calcRivalCarDelay(60)).toBe(19000);
+    });
+    it('floors at 8000ms', () => {
+        expect(calcRivalCarDelay(300)).toBe(8000);
+    });
+});
+
+describe('calcPickupDelay', () => {
+    it('starts at 3500ms', () => {
+        expect(calcPickupDelay(0)).toBe(3500);
+    });
+    it('increases with time (pickups get scarcer)', () => {
+        expect(calcPickupDelay(60)).toBe(5000);
+    });
+    it('caps at 7000ms', () => {
+        expect(calcPickupDelay(300)).toBe(7000);
     });
 });
 

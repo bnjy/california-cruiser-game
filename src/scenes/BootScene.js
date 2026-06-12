@@ -34,9 +34,6 @@ export default class BootScene extends Phaser.Scene {
             this.load.spritesheet(`graffiti${g}-hurt`, `assets/characters/graffiti${g}/Hurt_1.png`, {
                 frameWidth: 256, frameHeight: 256
             });
-            this.load.spritesheet(`graffiti${g}-special`, `assets/characters/graffiti${g}/Special_Blow_1.png`, {
-                frameWidth: 256, frameHeight: 256
-            });
         }
 
         // Items
