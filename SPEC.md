@@ -141,5 +141,6 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - `src/logic/rep.js` — REPUTATION addition, segment bonuses, penalties.
 - `src/logic/combo.js` — Combo multiplier thresholds.
 - `src/logic/pickups.js` — Road pickup selection (vinyl, microphone, dollar, bonus items).
+- `src/logic/highscore.js` — High score load/save, safe when storage is blocked.
 
 **Run:** `npm test` or `npx vitest` (watch mode).

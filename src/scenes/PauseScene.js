@@ -70,7 +70,9 @@ export default class PauseScene extends Phaser.Scene {
     }
 
     restart() {
-        this.scene.stop('Game');
-        this.scene.start('Title');
+        const bgm = this.sound.get('bgm');
+        if (bgm?.isPaused) bgm.resume();
+        // Stops this overlay and restarts the paused Game scene
+        this.scene.start('Game');
     }
 }

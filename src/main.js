@@ -15,10 +15,6 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH,
         zoom: SCALE
     },
-    physics: {
-        default: 'arcade',
-        arcade: { gravity: { y: 0 }, debug: false }
-    },
     scene: [BootScene, TitleScene, GameScene, GameOverScene, PauseScene]
 };
 

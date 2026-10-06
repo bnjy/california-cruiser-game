@@ -1,4 +1,5 @@
 import { NATIVE_W, NATIVE_H } from '../config.js';
+import { loadHighScore } from '../logic/highscore.js';
 
 export default class GameOverScene extends Phaser.Scene {
     constructor() { super('GameOver'); }
@@ -14,7 +15,7 @@ export default class GameOverScene extends Phaser.Scene {
 
         const stats = [
             `CASH: $${data.cash}`,
-            `ACCURACY: ${data.accuracy}%  (${data.vinylsHit}/${data.vinylsThrown})`,
+            `ACCURACY: ${data.accuracy}  (${data.vinylsHit}/${data.vinylsThrown})`,
             `REPUTATION: ${data.rep}`,
             `TIME: ${data.time}s`,
         ];
@@ -24,7 +25,8 @@ export default class GameOverScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
         }).setOrigin(0.5, 0);
 
-        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0', 10);
+        // max() keeps the screen right even if storage is blocked and the save failed
+        const highScore = Math.max(loadHighScore(localStorage), data.cash);
         if (data.newHighScore) {
             const newBanner = this.add.text(NATIVE_W / 2, 146, 'NEW HIGH SCORE!', {
                 fontSize: '12px', fontFamily: 'monospace', color: '#ffff00',
@@ -45,6 +47,9 @@ export default class GameOverScene extends Phaser.Scene {
 
         this.tweens.add({ targets: retry, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
 
-        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Title'));
+        // Short delay so mashing Space while crashing doesn't skip this screen
+        this.time.delayedCall(600, () => {
+            this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Game'));
+        });
     }
 }

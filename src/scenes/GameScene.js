@@ -8,7 +8,8 @@ import {
     MIC_DURATION,
 } from '../config.js';
 import { rollPickup } from '../logic/pickups.js';
-import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, calcAccuracy, formatAccuracy, isHighScore } from '../logic/scoring.js';
+import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, formatAccuracy } from '../logic/scoring.js';
+import { saveHighScore } from '../logic/highscore.js';
 import { calcScrollSpeed, calcFanDelay, calcHaterDelay, calcRivalCarDelay, calcPickupDelay, shouldDrainRep } from '../logic/difficulty.js';
 import { addRep as calcAddRep, calcSegment, segmentBonuses, calcSegmentProgress, applyRepPenalty } from '../logic/rep.js';
 import { comboMultiplier } from '../logic/combo.js';
@@ -44,7 +45,6 @@ export default class GameScene extends Phaser.Scene {
 
         // --- Player car ---
         this.createPlayerCar();
-        this.createAnimations();
 
         // --- Groups ---
         this.fans = this.add.group();
@@ -55,11 +55,11 @@ export default class GameScene extends Phaser.Scene {
         this.rivalCars = this.add.group();
 
         // --- Spawn timers ---
-        this.fanTimer = this.time.addEvent({ delay: 1800, callback: this.spawnFan, callbackScope: this, loop: true });
+        this.fanTimer = this.time.addEvent({ delay: calcFanDelay(0), callback: this.spawnFan, callbackScope: this, loop: true });
         this.time.delayedCall(500, this.spawnFan, [], this);
-        this.haterTimer = this.time.addEvent({ delay: 6000, callback: this.spawnHater, callbackScope: this, loop: true });
-        this.pickupTimer = this.time.addEvent({ delay: 3500, callback: this.spawnRoadPickup, callbackScope: this, loop: true });
-        this.rivalCarTimer = this.time.addEvent({ delay: 20000, callback: this.spawnRivalCar, callbackScope: this, loop: true });
+        this.haterTimer = this.time.addEvent({ delay: calcHaterDelay(0), callback: this.spawnHater, callbackScope: this, loop: true });
+        this.pickupTimer = this.time.addEvent({ delay: calcPickupDelay(0), callback: this.spawnRoadPickup, callbackScope: this, loop: true });
+        this.rivalCarTimer = this.time.addEvent({ delay: calcRivalCarDelay(0), callback: this.spawnRivalCar, callbackScope: this, loop: true });
 
         // --- Input ---
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -73,46 +73,6 @@ export default class GameScene extends Phaser.Scene {
 
         // --- HUD ---
         this.createHUD();
-    }
-
-    createAnimations() {
-        // Fan animations — City Men
-        for (let v = 1; v <= 3; v++) {
-            if (!this.anims.exists(`fan-walk-${v}`)) {
-                this.anims.create({
-                    key: `fan-walk-${v}`,
-                    frames: this.anims.generateFrameNumbers(`cityman${v}-walk`, { start: 0, end: 9 }),
-                    frameRate: 10, repeat: -1
-                });
-            }
-        }
-        // Hater animations — Graffiti Artists
-        for (let v = 1; v <= 3; v++) {
-            if (!this.anims.exists(`hater-walk-${v}`)) {
-                this.anims.create({
-                    key: `hater-walk-${v}`,
-                    frames: this.anims.generateFrameNumbers(`graffiti${v}-walk`, { start: 0, end: 9 }),
-                    frameRate: 10, repeat: -1
-                });
-            }
-            if (!this.anims.exists(`hater-hurt-${v}`)) {
-                this.anims.create({
-                    key: `hater-hurt-${v}`,
-                    frames: this.anims.generateFrameNumbers(`graffiti${v}-hurt`, { start: 0, end: 4 }),
-                    frameRate: 10, repeat: 0
-                });
-            }
-        }
-        if (!this.anims.exists('car-driving')) {
-            const carFrames = [];
-            for (let i = 1; i <= 5; i++) carFrames.push({ key: `car-run-${i}` });
-            this.anims.create({ key: 'car-driving', frames: carFrames, frameRate: 10, repeat: -1 });
-        }
-        if (!this.anims.exists('rival-driving')) {
-            const rivalFrames = [];
-            for (let i = 1; i <= 4; i++) rivalFrames.push({ key: `black-car-${i}` });
-            this.anims.create({ key: 'rival-driving', frames: rivalFrames, frameRate: 8, repeat: -1 });
-        }
     }
 
     createPlayerCar() {
@@ -155,7 +115,7 @@ export default class GameScene extends Phaser.Scene {
         hater.setData('throwCooldown', Phaser.Math.Between(2000, 4000));
         hater.setData('lastThrow', 0);
 
-        const indicator = this.add.circle(0, -70, 4, 0xff0000).setDepth(5);
+        const indicator = this.add.circle(hater.x, hater.y - 70, 4, 0xff0000).setDepth(5);
         hater.setData('indicator', indicator);
 
         this.haters.add(hater);
@@ -272,6 +232,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.hp = Math.max(0, this.hp - amount);
         this.updateHUD();
+        this.showFloatText(this.player.x, this.player.y - 70, `-${amount} HP`, '#ff4444');
         this.isInvincible = true;
         playSfx(this, 'hurt');
 
@@ -293,11 +254,7 @@ export default class GameScene extends Phaser.Scene {
         this.gameOver = true;
         playSfx(this, 'gameover');
 
-        const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0', 10);
-        const newHighScore = isHighScore(this.cash, prev);
-        if (newHighScore) {
-            localStorage.setItem('california-cruiser-highscore', this.cash);
-        }
+        const newHighScore = saveHighScore(localStorage, this.cash);
 
         this.fanTimer.remove();
         this.haterTimer.remove();
@@ -308,8 +265,8 @@ export default class GameScene extends Phaser.Scene {
             this.scene.start('GameOver', {
                 cash: this.cash,
                 newHighScore,
-                rep: this.rep,
-                accuracy: calcAccuracy(this.vinylsThrown, this.vinylsHit),
+                rep: Math.round(this.rep),
+                accuracy: formatAccuracy(this.vinylsThrown, this.vinylsHit),
                 vinylsThrown: this.vinylsThrown,
                 vinylsHit: this.vinylsHit,
                 time: Math.floor(this.gameTime)
@@ -465,7 +422,6 @@ export default class GameScene extends Phaser.Scene {
             if (dx < 50 && dy < 25) {
                 b.sprite.destroy(); b.active = false;
                 this.takeDamage(1);
-                this.showFloatText(this.player.x, this.player.y - 70, '-1 HP', '#ff4444');
                 continue;
             }
 
@@ -513,7 +469,6 @@ export default class GameScene extends Phaser.Scene {
             if (dx < 70 && dy < 20) {
                 rival.setData('hit', true);
                 this.takeDamage(1);
-                this.showFloatText(this.player.x, this.player.y - 70, '-1 HP!', '#ff0000');
 
                 const knockY = this.player.y < (ROAD_TOP_Y + ROAD_BOTTOM_Y) / 2 ? ROAD_BOTTOM_Y : ROAD_TOP_Y;
                 this.tweens.add({
@@ -613,7 +568,7 @@ export default class GameScene extends Phaser.Scene {
 
     // ========== MAIN UPDATE ==========
 
-    update(time, delta) {
+    update(_, delta) {
         if (this.gameOver) return;
         const dt = delta / 1000;
         this.gameTime += dt;
@@ -655,8 +610,8 @@ export default class GameScene extends Phaser.Scene {
             if (!hater.getData('converted') && !hater.getData('throwing') && hater.x < NATIVE_W - 50) {
                 const lastThrow = hater.getData('lastThrow') || 0;
                 const cooldown = hater.getData('throwCooldown') || 3000;
-                if (time - lastThrow > cooldown) {
-                    hater.setData('lastThrow', time);
+                if (this.time.now - lastThrow > cooldown) {
+                    hater.setData('lastThrow', this.time.now);
                     this.haterThrowBottle(hater);
                 }
             }

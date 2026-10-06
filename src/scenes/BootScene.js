@@ -65,6 +65,45 @@ export default class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // Shared animations — created once here, used by Title and Game
+        // Fan animations — City Men
+        for (let v = 1; v <= 3; v++) {
+            if (!this.anims.exists(`fan-walk-${v}`)) {
+                this.anims.create({
+                    key: `fan-walk-${v}`,
+                    frames: this.anims.generateFrameNumbers(`cityman${v}-walk`, { start: 0, end: 9 }),
+                    frameRate: 10, repeat: -1
+                });
+            }
+        }
+        // Hater animations — Graffiti Artists
+        for (let v = 1; v <= 3; v++) {
+            if (!this.anims.exists(`hater-walk-${v}`)) {
+                this.anims.create({
+                    key: `hater-walk-${v}`,
+                    frames: this.anims.generateFrameNumbers(`graffiti${v}-walk`, { start: 0, end: 9 }),
+                    frameRate: 10, repeat: -1
+                });
+            }
+            if (!this.anims.exists(`hater-hurt-${v}`)) {
+                this.anims.create({
+                    key: `hater-hurt-${v}`,
+                    frames: this.anims.generateFrameNumbers(`graffiti${v}-hurt`, { start: 0, end: 4 }),
+                    frameRate: 10, repeat: 0
+                });
+            }
+        }
+        if (!this.anims.exists('car-driving')) {
+            const carFrames = [];
+            for (let i = 1; i <= 5; i++) carFrames.push({ key: `car-run-${i}` });
+            this.anims.create({ key: 'car-driving', frames: carFrames, frameRate: 10, repeat: -1 });
+        }
+        if (!this.anims.exists('rival-driving')) {
+            const rivalFrames = [];
+            for (let i = 1; i <= 4; i++) rivalFrames.push({ key: `black-car-${i}` });
+            this.anims.create({ key: 'rival-driving', frames: rivalFrames, frameRate: 8, repeat: -1 });
+        }
+
         this.scene.start('Title');
     }
 }
