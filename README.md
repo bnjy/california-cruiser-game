@@ -22,14 +22,15 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ### Gameplay
 
-- Throw vinyl records at hip-hop heads walking the sidewalk to earn cash
-- Catch vinyl pickups on the road to replenish ammo (+3)
+- Throw vinyl records at hip-hop heads walking the sidewalk to earn cash — faster walkers pay more ($100/$150/$200)
+- Chain catches without missing to build a combo multiplier (x2 at 3 hits, x3 at 6)
+- Catch vinyl pickups on the road to replenish ammo (+5)
 - Dodge tagger bottles and the rival rapper's car — both deal 1 HP damage
-- Hit taggers with vinyls to convert them and earn bonus cash
+- Hit taggers with vinyls to convert them into fans for 2x rewards
 - Fill the REPUTATION meter — each segment unlocks a cash bonus
 - Grab microphones for 2x REPUTATION gain
 - Collect retro bonus items (cassettes, VHS tapes, cameras, etc.) for extra cash
-- Difficulty ramps over time — survive as long as you can
+- Difficulty ramps over time — enemies come faster, pickups get scarcer — survive as long as you can
 
 ## Tech Stack
 
@@ -45,6 +46,7 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 ├── src/
 │   ├── main.js             Phaser game initialization
 │   ├── config.js           Game constants & configuration
+│   ├── sfx.js              Synthesized WebAudio sound effects
 │   ├── scenes/
 │   │   ├── BootScene.js    Asset preloading
 │   │   ├── TitleScene.js   Title screen
@@ -54,7 +56,10 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 │   └── logic/              Pure functions (unit tested)
 │       ├── scoring.js      Cash/rep rewards, accuracy
 │       ├── difficulty.js   Speed and spawn rate curves
-│       └── rep.js          REP meter math and segment bonuses
+│       ├── rep.js          REP meter math and segment bonuses
+│       └── combo.js        Combo multiplier thresholds
+├── scripts/
+│   └── browser-smoke.mjs   Headless-browser gameplay smoke test
 ├── assets/                 Game-ready sprites
 │   ├── cars/               Player & rival car frames
 │   ├── characters/         NPC sprite sheets
@@ -97,7 +102,7 @@ Used for: bonus pickup items (vinyl, cassette, VHS, phone, Rubik's cube, dice, c
 - **License:** [CC0 (Public Domain)](https://creativecommons.org/publicdomain/zero/1.0/)
 - **Source:** [freesound.org/s/663445](https://freesound.org/s/663445/)
 
-Used for: looping background music throughout the game.
+Used for: looping background music throughout the game. Sound effects are synthesized at runtime with WebAudio — no audio asset files.
 
 ## Development
 
@@ -105,6 +110,9 @@ Used for: looping background music throughout the game.
 npm install        # Install dependencies
 npm run dev        # Start Vite dev server
 npm run build      # Production build
-npm test           # Run tests
+npm test           # Run unit tests
 npm run lint       # Lint src/
+
+# Browser smoke test (requires dev server running + Chrome)
+node scripts/browser-smoke.mjs
 ```

@@ -7,14 +7,18 @@ import {
 } from '../scoring.js';
 
 describe('fanCashReward', () => {
-    it('returns 10', () => {
-        expect(fanCashReward()).toBe(10);
+    it('pays by speed tier: slow $100, medium $150, fast $200', () => {
+        expect(fanCashReward(0)).toBe(100);
+        expect(fanCashReward(1)).toBe(150);
+        expect(fanCashReward(2)).toBe(200);
     });
 });
 
 describe('haterCashReward', () => {
-    it('returns 200', () => {
-        expect(haterCashReward()).toBe(200);
+    it('pays 2x the fan reward for the same tier', () => {
+        expect(haterCashReward(0)).toBe(200);
+        expect(haterCashReward(1)).toBe(300);
+        expect(haterCashReward(2)).toBe(400);
     });
 });
 
@@ -22,8 +26,8 @@ describe('rep rewards', () => {
     it('fan gives 10 rep', () => {
         expect(fanRepReward()).toBe(10);
     });
-    it('hater gives 25 rep', () => {
-        expect(haterRepReward()).toBe(25);
+    it('hater gives 2x fan rep', () => {
+        expect(haterRepReward()).toBe(20);
     });
 });
 

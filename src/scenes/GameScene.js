@@ -5,10 +5,13 @@ import {
     BASE_SCROLL_SPEED,
     REP_SEGMENTS,
     BONUS_PICKUPS,
+    FAN_TIERS,
 } from '../config.js';
 import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, calcAccuracy, formatAccuracy, isHighScore } from '../logic/scoring.js';
-import { calcScrollSpeed, calcFanDelay, calcHaterDelay, calcRivalCarDelay, shouldDrainRep } from '../logic/difficulty.js';
+import { calcScrollSpeed, calcFanDelay, calcHaterDelay, calcRivalCarDelay, calcPickupDelay, shouldDrainRep } from '../logic/difficulty.js';
 import { addRep as calcAddRep, calcSegment, segmentBonuses, calcSegmentProgress, applyRepPenalty } from '../logic/rep.js';
+import { comboMultiplier } from '../logic/combo.js';
+import { playSfx } from '../sfx.js';
 
 export default class GameScene extends Phaser.Scene {
     constructor() { super('Game'); }
@@ -23,6 +26,7 @@ export default class GameScene extends Phaser.Scene {
         this.vinylAmmo = 15;
         this.vinylsThrown = 0;
         this.vinylsHit = 0;
+        this.combo = 0;
         this.scrollSpeed = BASE_SCROLL_SPEED;
         this.gameTime = 0;
         this.isInvincible = false;
@@ -90,13 +94,6 @@ export default class GameScene extends Phaser.Scene {
                     frameRate: 10, repeat: -1
                 });
             }
-            if (!this.anims.exists(`hater-throw-${v}`)) {
-                this.anims.create({
-                    key: `hater-throw-${v}`,
-                    frames: this.anims.generateFrameNumbers(`graffiti${v}-special`, { start: 0, end: 9 }),
-                    frameRate: 10, repeat: 0
-                });
-            }
             if (!this.anims.exists(`hater-hurt-${v}`)) {
                 this.anims.create({
                     key: `hater-hurt-${v}`,
@@ -133,8 +130,10 @@ export default class GameScene extends Phaser.Scene {
         fan.setScale(0.7);
         fan.play(`fan-walk-${variant}`);
         fan.flipX = true;
+        const tier = Phaser.Math.Between(0, FAN_TIERS.length - 1);
         fan.setData('variant', variant);
-        fan.setData('speed', Phaser.Math.Between(30, 60));
+        fan.setData('tier', tier);
+        fan.setData('speed', Phaser.Math.Between(FAN_TIERS[tier].minSpeed, FAN_TIERS[tier].maxSpeed));
         fan.setData('caught', false);
         this.fans.add(fan);
     }
@@ -148,6 +147,7 @@ export default class GameScene extends Phaser.Scene {
         hater.play(`hater-walk-${variant}`);
         hater.flipX = true;
         hater.setData('variant', variant);
+        hater.setData('tier', Phaser.Math.Between(0, FAN_TIERS.length - 1));
         hater.setData('speed', Phaser.Math.Between(20, 40));
         hater.setData('converted', false);
         hater.setData('throwing', false);
@@ -168,15 +168,15 @@ export default class GameScene extends Phaser.Scene {
         const roll = Math.random();
         let pickupKey, pickupType, pickupValue;
 
-        if (roll < 0.30) {
+        if (roll < 0.35) {
             pickupKey = 'vinyl';
             pickupType = 'vinyl';
-            pickupValue = 3;
-        } else if (roll < 0.35) {
+            pickupValue = 5;
+        } else if (roll < 0.40) {
             pickupKey = 'microphone';
             pickupType = 'microphone';
             pickupValue = 0;
-        } else if (roll < 0.45) {
+        } else if (roll < 0.50) {
             pickupKey = 'dollar';
             pickupType = 'cash';
             pickupValue = 50;
@@ -224,7 +224,8 @@ export default class GameScene extends Phaser.Scene {
 
         hater.setData('throwing', true);
         const variant = hater.getData('variant');
-        hater.play(`hater-throw-${variant}`);
+        // No throw spritesheet exists — freeze the walk pose during the wind-up
+        hater.anims.stop();
         hater.setData('speed', 0);
 
         this.time.delayedCall(600, () => {
@@ -263,6 +264,7 @@ export default class GameScene extends Phaser.Scene {
         this.vinylAmmo--;
         this.vinylsThrown++;
         this.updateHUD();
+        playSfx(this, 'throw');
 
         const startX = this.player.x + 10;
         const startY = this.player.y - 50;
@@ -290,6 +292,7 @@ export default class GameScene extends Phaser.Scene {
         this.hp = Math.max(0, this.hp - amount);
         this.updateHUD();
         this.isInvincible = true;
+        playSfx(this, 'hurt');
 
         this.player.setTint(0xff0000);
         this.tweens.add({
@@ -307,6 +310,7 @@ export default class GameScene extends Phaser.Scene {
 
     triggerGameOver() {
         this.gameOver = true;
+        playSfx(this, 'gameover');
 
         const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
         if (isHighScore(this.cash, prev)) {
@@ -391,6 +395,7 @@ export default class GameScene extends Phaser.Scene {
             if (hit) continue;
             if (v.sprite.y > NATIVE_H + 30 || v.sprite.x > NATIVE_W + 60 || v.sprite.y < -30) {
                 v.sprite.destroy(); v.active = false;
+                this.combo = 0;
             }
         }
     }
@@ -400,17 +405,21 @@ export default class GameScene extends Phaser.Scene {
         vinylData.active = false;
         fan.setData('caught', true);
         this.vinylsHit++;
+        this.combo++;
 
-        const cashGain = fanCashReward();
+        const mult = comboMultiplier(this.combo);
+        const cashGain = fanCashReward(fan.getData('tier')) * mult;
         const repGain = fanRepReward();
         this.cash += cashGain;
         this.addRep(repGain);
         this.updateHUD();
+        playSfx(this, 'catch');
 
         fan.setData('speed', 0);
 
         this.showDollarFloat(fan.x, fan.y - 60);
         this.showFloatText(fan.x, fan.y - 80, `+$${cashGain}`);
+        if (mult > 1) this.showFloatText(fan.x, fan.y - 95, `COMBO x${mult}!`, '#ffff00');
 
         this.time.delayedCall(800, () => {
             if (fan.active) {
@@ -424,12 +433,15 @@ export default class GameScene extends Phaser.Scene {
         vinylData.active = false;
         hater.setData('converted', true);
         this.vinylsHit++;
+        this.combo++;
 
-        const cashGain = haterCashReward();
+        const mult = comboMultiplier(this.combo);
+        const cashGain = haterCashReward(hater.getData('tier')) * mult;
         const repGain = haterRepReward();
         this.cash += cashGain;
         this.addRep(repGain);
         this.updateHUD();
+        playSfx(this, 'convert');
 
         const variant = hater.getData('variant');
 
@@ -444,6 +456,7 @@ export default class GameScene extends Phaser.Scene {
             this.showDollarFloat(hater.x, hater.y - 60);
             this.showFloatText(hater.x, hater.y - 80, `+$${cashGain}`, '#00ff00');
             this.showFloatText(hater.x + 30, hater.y - 70, 'CONVERTED!', '#ff6ec7');
+            if (mult > 1) this.showFloatText(hater.x, hater.y - 95, `COMBO x${mult}!`, '#ffff00');
         });
 
         this.time.delayedCall(1200, () => {
@@ -498,6 +511,7 @@ export default class GameScene extends Phaser.Scene {
 
                 pickup.setActive(false);
                 this.updateHUD();
+                playSfx(this, 'pickup');
                 this.tweens.add({
                     targets: pickup, scaleX: pickup.scaleX * 1.5, scaleY: pickup.scaleY * 1.5,
                     alpha: 0, duration: 200, onComplete: () => pickup.destroy()
@@ -609,6 +623,7 @@ export default class GameScene extends Phaser.Scene {
         this.fanTimer.delay = calcFanDelay(this.gameTime);
         this.haterTimer.delay = calcHaterDelay(this.gameTime);
         this.rivalCarTimer.delay = calcRivalCarDelay(this.gameTime);
+        this.pickupTimer.delay = calcPickupDelay(this.gameTime);
     }
 
     // ========== MAIN UPDATE ==========

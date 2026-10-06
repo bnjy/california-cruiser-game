@@ -6,7 +6,7 @@ export default class GameOverScene extends Phaser.Scene {
     create(data) {
         this.cameras.main.setBackgroundColor('#1a0a2e');
 
-        this.add.text(NATIVE_W / 2, 30, 'WRECKED', {
+        this.add.text(NATIVE_W / 2, 26, 'WRECKED', {
             fontSize: '36px', fontFamily: 'monospace', color: '#ff0044',
             stroke: '#000', strokeThickness: 5,
             shadow: { offsetX: 2, offsetY: 2, color: '#ff0000', blur: 10, fill: true }
@@ -19,17 +19,27 @@ export default class GameOverScene extends Phaser.Scene {
             `TIME: ${data.time}s`,
         ];
 
-        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
-        const isNew = data.cash >= highScore && data.cash > 0;
-        if (isNew) stats.push('', 'NEW HIGH SCORE!');
-        stats.push('', `HIGH SCORE: $${highScore}`);
-
-        this.add.text(NATIVE_W / 2, 78, stats.join('\n'), {
+        this.add.text(NATIVE_W / 2, 60, stats.join('\n'), {
             fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
         }).setOrigin(0.5, 0);
 
-        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 30, 'PRESS SPACE TO RETRY', {
+        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
+        const isNew = data.cash >= highScore && data.cash > 0;
+        if (isNew) {
+            const newBanner = this.add.text(NATIVE_W / 2, 146, 'NEW HIGH SCORE!', {
+                fontSize: '12px', fontFamily: 'monospace', color: '#ffff00',
+                stroke: '#000', strokeThickness: 2
+            }).setOrigin(0.5);
+            this.tweens.add({ targets: newBanner, alpha: 0.3, duration: 400, yoyo: true, repeat: -1 });
+        }
+
+        this.add.text(NATIVE_W / 2, 166, `HIGH SCORE: $${highScore}`, {
+            fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
+            stroke: '#000', strokeThickness: 2
+        }).setOrigin(0.5);
+
+        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 26, 'PRESS SPACE TO RETRY', {
             fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5);
