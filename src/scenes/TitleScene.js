@@ -1,4 +1,5 @@
 import { NATIVE_W, NATIVE_H, PLAYER_START_X, ROAD_BOTTOM_Y, SIDEWALK_Y } from '../config.js';
+import { loadHighScore } from '../logic/highscore.js';
 
 export default class TitleScene extends Phaser.Scene {
     constructor() { super('Title'); }
@@ -10,9 +11,6 @@ export default class TitleScene extends Phaser.Scene {
         this.bgBuildings = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-buildings').setOrigin(0, 0);
         this.bgPalms = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-palms').setOrigin(0, 0);
         this.bgHighway = this.add.tileSprite(0, 0, NATIVE_W, NATIVE_H, 'bg-highway').setOrigin(0, 0);
-
-        // --- Ensure animations exist ---
-        this.createAnimations();
 
         // --- Animated player car ---
         this.add.sprite(PLAYER_START_X, ROAD_BOTTOM_Y, 'car-run-1')
@@ -56,7 +54,7 @@ export default class TitleScene extends Phaser.Scene {
         });
 
         // --- High score ---
-        const highScore = localStorage.getItem('california-cruiser-highscore') || 0;
+        const highScore = loadHighScore(localStorage);
         if (highScore > 0) {
             this.add.text(NATIVE_W / 2, 158, `HIGH SCORE: $${highScore}`, {
                 fontSize: '12px', fontFamily: 'monospace', color: '#ffff00',
@@ -92,23 +90,6 @@ export default class TitleScene extends Phaser.Scene {
         this.input.keyboard.once('keydown-SPACE', () => this.startGame());
     }
 
-    createAnimations() {
-        for (let v = 1; v <= 3; v++) {
-            if (!this.anims.exists(`fan-walk-${v}`)) {
-                this.anims.create({
-                    key: `fan-walk-${v}`,
-                    frames: this.anims.generateFrameNumbers(`cityman${v}-walk`, { start: 0, end: 9 }),
-                    frameRate: 10, repeat: -1
-                });
-            }
-        }
-        if (!this.anims.exists('car-driving')) {
-            const carFrames = [];
-            for (let i = 1; i <= 5; i++) carFrames.push({ key: `car-run-${i}` });
-            this.anims.create({ key: 'car-driving', frames: carFrames, frameRate: 10, repeat: -1 });
-        }
-    }
-
     showStartPrompt() {
         this.startText.setAlpha(1);
         this.tweens.add({ targets: this.startText, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
@@ -140,11 +121,13 @@ export default class TitleScene extends Phaser.Scene {
     update(_, delta) {
         const dt = delta / 1000;
 
-        this.bgBack.tilePositionX += 0.1;
-        this.bgSun.tilePositionX += 0.15;
-        this.bgBuildings.tilePositionX += 0.3;
-        this.bgPalms.tilePositionX += 0.5;
-        this.bgHighway.tilePositionX += 1;
+        // Frame-rate independent: 60 px/s at the highway layer
+        const speed = 60 * dt;
+        this.bgBack.tilePositionX += speed * 0.1;
+        this.bgSun.tilePositionX += speed * 0.15;
+        this.bgBuildings.tilePositionX += speed * 0.3;
+        this.bgPalms.tilePositionX += speed * 0.5;
+        this.bgHighway.tilePositionX += speed;
 
         // Move and clean up title fans
         for (let i = this.titleFans.length - 1; i >= 0; i--) {

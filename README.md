@@ -57,16 +57,17 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 │       ├── scoring.js      Cash/rep rewards, accuracy
 │       ├── difficulty.js   Speed and spawn rate curves
 │       ├── rep.js          REP meter math and segment bonuses
-│       └── combo.js        Combo multiplier thresholds
+│       ├── combo.js        Combo multiplier thresholds
+│       ├── pickups.js      Road pickup selection
+│       └── highscore.js    High score persistence
 ├── scripts/
 │   └── browser-smoke.mjs   Headless-browser gameplay smoke test
-├── assets/                 Game-ready sprites
-│   ├── cars/               Player & rival car frames
-│   ├── characters/         NPC sprite sheets
-│   ├── items/              Pickups & projectiles
-│   ├── layers/             Parallax background layers
-│   └── sound/              Background music
-└── assetLibrary/           Original source assets
+└── public/assets/          Game-ready sprites (served/copied as-is by Vite)
+    ├── cars/               Player & rival car frames
+    ├── characters/         NPC sprite sheets
+    ├── items/              Pickups & projectiles
+    ├── layers/             Parallax background layers
+    └── sound/              Background music
 ```
 
 ## Asset Credits
@@ -86,7 +87,7 @@ Used for: parallax background layers (sun, buildings, palms, highway) and car sp
 - **License:** [CraftPix File License](https://craftpix.net/file-licenses/) — free for personal and commercial use, no attribution required
 - **Source:** [craftpix.net](https://craftpix.net)
 
-Used for: Characterts & NPC animations (walk, attack, hurt, special).
+Used for: Characters & NPC animations (walk, attack, hurt, special).
 
 ### Retro Item Sprites
 

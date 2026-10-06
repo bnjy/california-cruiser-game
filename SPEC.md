@@ -69,7 +69,7 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - [x] Fans spawning on sidewalk (3 character variants, walk right-to-left)
 - [x] Vinyl-to-fan hit detection with catch animation
 - [x] Cash scoring system (fan catches award $100–$200)
-- [x] Ammo system (15 start, vinyl pickups grant +3)
+- [x] Ammo system (15 start, vinyl pickups grant +5)
 - [x] Basic HUD: cash, ammo count, accuracy %
 - [x] Title screen with synthwave parallax and high score display
 
@@ -140,5 +140,7 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - `src/logic/difficulty.js` — Scroll speed, spawn delay curves, rep drain threshold.
 - `src/logic/rep.js` — REPUTATION addition, segment bonuses, penalties.
 - `src/logic/combo.js` — Combo multiplier thresholds.
+- `src/logic/pickups.js` — Road pickup selection (vinyl, microphone, dollar, bonus items).
+- `src/logic/highscore.js` — High score load/save, safe when storage is blocked.
 
 **Run:** `npm test` or `npx vitest` (watch mode).

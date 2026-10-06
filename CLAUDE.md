@@ -27,17 +27,23 @@ index.html              # Entry point (loads Phaser CDN + src/main.js)
 src/
   main.js               # Phaser game config & boot
   config.js             # Game constants (dimensions, speeds, REP values, pickups)
+  sfx.js                # Synthesized WebAudio sound effects
   scenes/
-    BootScene.js         # Asset loading
+    BootScene.js         # Asset loading + shared animations
     TitleScene.js        # Title screen
     GameScene.js         # Main gameplay
+    PauseScene.js        # Pause menu (Esc)
     GameOverScene.js     # Game over screen
   logic/                 # Pure functions (no Phaser dependency) — unit tested
     scoring.js           # Cash/rep rewards, accuracy, high score
     difficulty.js        # Scroll speed, spawn delay curves
     rep.js               # REP meter math, gold record, penalties
+    combo.js             # Combo multiplier thresholds
+    pickups.js           # Road pickup selection
+    highscore.js         # High score load/save (storage injected)
     __tests__/           # Vitest tests for logic modules
-assets/                  # Pixel art sprites and backgrounds
+public/assets/           # Pixel art sprites, backgrounds, music (copied as-is by Vite)
+scripts/browser-smoke.mjs  # Headless-browser smoke test (needs dev server)
 ```
 
 ## Architecture Notes
