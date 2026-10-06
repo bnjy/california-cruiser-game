@@ -48,3 +48,11 @@ export const BONUS_PICKUPS = [
     { key: 'lcdgame', cash: 30 },
     { key: 'vcr', cash: 30 },
 ];
+
+// Road pickup odds — one roll in [0, 1); anything past these is a bonus item
+export const PICKUP_VINYL_CHANCE = 0.35;
+export const PICKUP_MIC_CHANCE = 0.05;
+export const PICKUP_DOLLAR_CHANCE = 0.10;
+export const VINYL_PICKUP_AMMO = 5;
+export const DOLLAR_PICKUP_CASH = 50;
+export const MIC_DURATION = 8000;

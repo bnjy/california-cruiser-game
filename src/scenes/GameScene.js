@@ -4,9 +4,10 @@ import {
     PLAYER_START_X, PLAYER_MIN_X, PLAYER_MAX_X, PLAYER_MIN_Y, PLAYER_MAX_Y, PLAYER_SPEED,
     BASE_SCROLL_SPEED,
     REP_SEGMENTS,
-    BONUS_PICKUPS,
     FAN_TIERS,
+    MIC_DURATION,
 } from '../config.js';
+import { rollPickup } from '../logic/pickups.js';
 import { fanCashReward, haterCashReward, fanRepReward, haterRepReward, calcAccuracy, formatAccuracy, isHighScore } from '../logic/scoring.js';
 import { calcScrollSpeed, calcFanDelay, calcHaterDelay, calcRivalCarDelay, calcPickupDelay, shouldDrainRep } from '../logic/difficulty.js';
 import { addRep as calcAddRep, calcSegment, segmentBonuses, calcSegmentProgress, applyRepPenalty } from '../logic/rep.js';
@@ -165,27 +166,7 @@ export default class GameScene extends Phaser.Scene {
         const lanes = [ROAD_TOP_Y, ROAD_BOTTOM_Y];
         const y = Phaser.Utils.Array.GetRandom(lanes) - 20;
 
-        const roll = Math.random();
-        let pickupKey, pickupType, pickupValue;
-
-        if (roll < 0.35) {
-            pickupKey = 'vinyl';
-            pickupType = 'vinyl';
-            pickupValue = 5;
-        } else if (roll < 0.40) {
-            pickupKey = 'microphone';
-            pickupType = 'microphone';
-            pickupValue = 0;
-        } else if (roll < 0.50) {
-            pickupKey = 'dollar';
-            pickupType = 'cash';
-            pickupValue = 50;
-        } else {
-            const item = Phaser.Utils.Array.GetRandom(BONUS_PICKUPS);
-            pickupKey = item.key;
-            pickupType = 'cash';
-            pickupValue = item.cash;
-        }
+        const { key: pickupKey, type: pickupType, value: pickupValue } = rollPickup(Math.random(), Math.random());
 
         const pickup = this.add.image(NATIVE_W + 20, y, pickupKey).setOrigin(0.5);
         pickup.setScale(pickupKey === 'dollar' ? 0.15 : (pickupKey === 'microphone' ? 1.5 : 0.7));
@@ -312,8 +293,9 @@ export default class GameScene extends Phaser.Scene {
         this.gameOver = true;
         playSfx(this, 'gameover');
 
-        const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
-        if (isHighScore(this.cash, prev)) {
+        const prev = parseInt(localStorage.getItem('california-cruiser-highscore') || '0', 10);
+        const newHighScore = isHighScore(this.cash, prev);
+        if (newHighScore) {
             localStorage.setItem('california-cruiser-highscore', this.cash);
         }
 
@@ -325,6 +307,7 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
             this.scene.start('GameOver', {
                 cash: this.cash,
+                newHighScore,
                 rep: this.rep,
                 accuracy: calcAccuracy(this.vinylsThrown, this.vinylsHit),
                 vinylsThrown: this.vinylsThrown,
@@ -353,9 +336,10 @@ export default class GameScene extends Phaser.Scene {
         this.micActive = true;
         this.showFloatText(this.player.x, this.player.y - 70, '2x REPUTATION!', '#ff6ec7');
         if (this.micTimer) this.micTimer.remove();
-        this.micTimer = this.time.delayedCall(8000, () => {
+        this.micTimer = this.time.delayedCall(MIC_DURATION, () => {
             this.micActive = false;
             this.micTimer = null;
+            this.updateHUD();
         });
     }
 
@@ -512,6 +496,7 @@ export default class GameScene extends Phaser.Scene {
                 pickup.setActive(false);
                 this.updateHUD();
                 playSfx(this, 'pickup');
+                this.tweens.killTweensOf(pickup);
                 this.tweens.add({
                     targets: pickup, scaleX: pickup.scaleX * 1.5, scaleY: pickup.scaleY * 1.5,
                     alpha: 0, duration: 200, onComplete: () => pickup.destroy()
@@ -686,7 +671,10 @@ export default class GameScene extends Phaser.Scene {
         for (const pickup of [...this.roadPickups.getChildren()]) {
             if (!pickup.active) continue;
             pickup.x -= this.scrollSpeed * dt;
-            if (pickup.x < -30) pickup.destroy();
+            if (pickup.x < -30) {
+                this.tweens.killTweensOf(pickup);
+                pickup.destroy();
+            }
         }
 
         // Move rival cars

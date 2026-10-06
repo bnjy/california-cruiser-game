@@ -24,9 +24,8 @@ export default class GameOverScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2, align: 'center', lineSpacing: 4
         }).setOrigin(0.5, 0);
 
-        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0');
-        const isNew = data.cash >= highScore && data.cash > 0;
-        if (isNew) {
+        const highScore = parseInt(localStorage.getItem('california-cruiser-highscore') || '0', 10);
+        if (data.newHighScore) {
             const newBanner = this.add.text(NATIVE_W / 2, 146, 'NEW HIGH SCORE!', {
                 fontSize: '12px', fontFamily: 'monospace', color: '#ffff00',
                 stroke: '#000', strokeThickness: 2

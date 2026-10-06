@@ -36,6 +36,8 @@ src/
     scoring.js           # Cash/rep rewards, accuracy, high score
     difficulty.js        # Scroll speed, spawn delay curves
     rep.js               # REP meter math, gold record, penalties
+    combo.js             # Combo multiplier thresholds
+    pickups.js           # Road pickup selection
     __tests__/           # Vitest tests for logic modules
 assets/                  # Pixel art sprites and backgrounds
 ```
