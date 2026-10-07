@@ -120,7 +120,7 @@ Arrow keys / WASD to move freely in all directions across 3 lanes (sidewalk, top
 - [x] Background music (looping chiptune track)
 - [x] Sound effects (synthesized WebAudio chiptune SFX — throw, catch, convert, pickup, hurt, game over)
 - [x] Combo system (consecutive catches multiply cash; miss resets)
-- [ ] Mobile touch controls (stretch)
+- [x] Mobile touch controls (drag left half to steer, tap right half to throw)
 
 **Playable Outcome:** Same core gameplay with polished visual feedback, persistent high scores, and optional sound/mobile support.
 

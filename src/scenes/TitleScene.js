@@ -63,7 +63,8 @@ export default class TitleScene extends Phaser.Scene {
         }
 
         // --- Start prompt (hidden until typewriter finishes) ---
-        this.startText = this.add.text(NATIVE_W / 2, NATIVE_H - 40, 'PRESS SPACE TO START', {
+        const prompt = this.sys.game.device.input.touch ? 'TAP TO START' : 'PRESS SPACE TO START';
+        this.startText = this.add.text(NATIVE_W / 2, NATIVE_H - 40, prompt, {
             fontSize: '14px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5).setAlpha(0).setDepth(10);
@@ -88,6 +89,7 @@ export default class TitleScene extends Phaser.Scene {
 
         // --- Input ---
         this.input.keyboard.once('keydown-SPACE', () => this.startGame());
+        this.input.once('pointerdown', () => this.startGame());
     }
 
     showStartPrompt() {

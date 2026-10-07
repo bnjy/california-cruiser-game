@@ -40,16 +40,17 @@ export default class GameOverScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5);
 
-        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 26, 'PRESS SPACE TO RETRY', {
+        const retry = this.add.text(NATIVE_W / 2, NATIVE_H - 26, this.sys.game.device.input.touch ? 'TAP TO RETRY' : 'PRESS SPACE TO RETRY', {
             fontSize: '12px', fontFamily: 'monospace', color: '#ffffff',
             stroke: '#000', strokeThickness: 2
         }).setOrigin(0.5);
 
         this.tweens.add({ targets: retry, alpha: 0.2, duration: 600, yoyo: true, repeat: -1 });
 
-        // Short delay so mashing Space while crashing doesn't skip this screen
+        // Short delay so mashing Space/taps while crashing doesn't skip this screen
         this.time.delayedCall(600, () => {
             this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Game'));
+            this.input.once('pointerdown', () => this.scene.start('Game'));
         });
     }
 }

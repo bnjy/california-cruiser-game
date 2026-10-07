@@ -23,7 +23,10 @@ export default class PauseScene extends Phaser.Scene {
             return this.add.text(NATIVE_W / 2, 100 + i * 30, label, {
                 fontSize: '14px', fontFamily: 'monospace', color: '#ffffff',
                 stroke: '#000', strokeThickness: 3
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setInteractive().on('pointerdown', () => {
+                this.selected = i;
+                this.confirm();
+            });
         });
 
         this.updateSelection();
