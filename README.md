@@ -11,7 +11,7 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ## How to Play
 
-1. Run `npm run dev` and open in browser
+1. Open **[bnjy.github.io/california-cruiser-game](https://bnjy.github.io/california-cruiser-game/)** (or run locally, see [Development](#development))
 2. Read the story intro, then press **Space** to start
 
 ### Controls
@@ -44,6 +44,8 @@ A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports c
 
 ```
 ├── index.html              Entry point
+├── .github/workflows/
+│   └── ci.yml              Lint, test, build + deploy to GitHub Pages
 ├── SPEC.md                 Game design document
 ├── src/
 │   ├── main.js             Phaser game initialization
@@ -119,3 +121,11 @@ npm run lint       # Lint src/
 # Browser smoke test (requires dev server running + Chrome)
 node scripts/browser-smoke.mjs
 ```
+
+### CI & Deployment
+
+Every push and pull request runs lint, tests and a production build via GitHub Actions. Merging to `main` deploys the build to GitHub Pages automatically. `main` is protected: changes go through a pull request with a green CI check.
+
+## License
+
+Code is released under the [MIT License](LICENSE). Game assets are not — they belong to their authors under the licenses listed in [Asset Credits](#asset-credits).
