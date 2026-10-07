@@ -71,6 +71,18 @@ export default class GameScene extends Phaser.Scene {
         this.spaceBar.on('down', this.throwVinyl, this);
         this.input.keyboard.on('keydown-ESC', this.pauseGame, this);
 
+        // Touch: hold + drag on left half steers (virtual stick), tap right half throws
+        this.input.addPointer(1);
+        this.input.on('pointerdown', (pointer, over) => {
+            if (over.length === 0 && pointer.x >= NATIVE_W / 2) this.throwVinyl();
+        });
+        if (this.sys.game.device.input.touch) {
+            this.add.text(NATIVE_W - 120, 8, '||', {
+                fontSize: '14px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000', strokeThickness: 3,
+                padding: { x: 6, y: 2 }
+            }).setDepth(20).setInteractive().on('pointerdown', this.pauseGame, this);
+        }
+
         // --- HUD ---
         this.createHUD();
     }
@@ -582,13 +594,17 @@ export default class GameScene extends Phaser.Scene {
         this.bgHighway.tilePositionX += speed * 1.0;
 
         // Player movement
-        if (this.cursors.up.isDown || this.keyW.isDown)
+        const stick = this.input.manager.pointers.find(p => p.isDown && p.downX < NATIVE_W / 2);
+        const sx = stick ? stick.x - stick.downX : 0;
+        const sy = stick ? stick.y - stick.downY : 0;
+        const DEAD = 6;
+        if (this.cursors.up.isDown || this.keyW.isDown || sy < -DEAD)
             this.player.y = Math.max(PLAYER_MIN_Y, this.player.y - PLAYER_SPEED * dt);
-        if (this.cursors.down.isDown || this.keyS.isDown)
+        if (this.cursors.down.isDown || this.keyS.isDown || sy > DEAD)
             this.player.y = Math.min(PLAYER_MAX_Y, this.player.y + PLAYER_SPEED * dt);
-        if (this.cursors.left.isDown || this.keyA.isDown)
+        if (this.cursors.left.isDown || this.keyA.isDown || sx < -DEAD)
             this.player.x = Math.max(PLAYER_MIN_X, this.player.x - PLAYER_SPEED * dt);
-        if (this.cursors.right.isDown || this.keyD.isDown)
+        if (this.cursors.right.isDown || this.keyD.isDown || sx > DEAD)
             this.player.x = Math.min(PLAYER_MAX_X, this.player.x + PLAYER_SPEED * dt);
 
         // Move fans
