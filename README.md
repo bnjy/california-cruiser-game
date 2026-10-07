@@ -1,5 +1,7 @@
 # California Cruiser
 
+[![CI](https://github.com/bnjy/california-cruiser-game/actions/workflows/ci.yml/badge.svg)](https://github.com/bnjy/california-cruiser-game/actions/workflows/ci.yml) · **[Play it here →](https://bnjy.github.io/california-cruiser-game/)**
+
 A pixel-art side-scrolling action game built with Phaser 3. Drive a red sports car along a California boulevard at sunset, throwing vinyl records at hip-hop heads to earn cash. Dodge taggers and a rival rapper's car. Cash earned is your score.
 
 **Inspired by childhood gaming memories such as** TMNT: Turtles in Time, Super Star Wars, Mega Man 7
